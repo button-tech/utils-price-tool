@@ -1,4 +1,4 @@
-module github.com/utils-tool_prices
+module github.com/utils-price-tool
 
 go 1.12
 

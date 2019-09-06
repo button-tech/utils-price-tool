@@ -2,10 +2,11 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/utils-tool_prices/handlers"
-	"github.com/utils-tool_prices/services"
-	"github.com/utils-tool_prices/storage"
-	"github.com/utils-tool_prices/tasks"
+	"github.com/utils-price-tool/handlers"
+	"github.com/utils-price-tool/services"
+	"github.com/utils-price-tool/storage"
+	"github.com/utils-price-tool/tasks"
+
 	"log"
 	"time"
 )

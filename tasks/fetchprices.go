@@ -1,8 +1,8 @@
 package tasks
 
 import (
-	"github.com/utils-tool_prices/services"
-	"github.com/utils-tool_prices/storage"
+	"github.com/utils-price-tool/services"
+	"github.com/utils-price-tool/storage"
 	"log"
 	"sync"
 	"time"
@@ -15,13 +15,14 @@ func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.St
 	go func() {
 		for _ = range ticker {
 			tokens := services.InitRequestData()
-			ch := make(chan storage.Prices, 3)
-			var stored []storage.Prices
+
+			ch := make(chan storage.GotPrices, 3)
+			var stored []storage.GotPrices
 
 			for _, t := range tokens.Tokens {
 				wg.Add(1)
 
-				go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.Prices) {
+				go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
 					defer wg.Done()
 
 					got, err := s.GetPricesCMC(t)
@@ -30,14 +31,7 @@ func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.St
 						return
 					}
 
-					var storeItem storage.Prices
-					for _, i := range got.Docs {
-						storeItem.Currency = got.Currency
-						contract := map[string]string{i.Contract: i.Price}
-						storeItem.Rates = append(storeItem.Rates, &contract)
-					}
-
-					ch <- storeItem
+					ch <- got
 
 				}(&wg, &t, ch)
 				item := <- ch

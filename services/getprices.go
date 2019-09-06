@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"github.com/imroc/req"
+	"github.com/utils-price-tool/storage"
 	"os"
 )
 
@@ -32,22 +33,8 @@ type TokensWithCurrencies struct {
 	Tokens []TokensWithCurrency
 }
 
-// data from trust-wallet
-type GotPrices struct {
-	Status   bool         `json:"status"`
-	Docs     []DocsPrices `json:"docs"`
-	Currency string       `json:"currency"`
-}
-
-type DocsPrices struct {
-	Price            string `json:"price"`
-	Contract         string `json:"contract"`
-	PercentChange24H string `json:"percent_change_24h"`
-}
-
 type Service interface {
-	//GetAllPricesCMC() *[]storage.Prices
-	GetPricesCMC(tokens *TokensWithCurrency) (GotPrices, error)
+	GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error)
 }
 
 type service struct{}
@@ -77,16 +64,16 @@ func InitRequestData() TokensWithCurrencies {
 	return tokensMultiCurrencies
 }
 
-func(s *service) GetPricesCMC(tokens *TokensWithCurrency) (GotPrices, error) {
+func(s *service) GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error) {
 	url := os.Getenv("TRUST_URL")
 	rq, err := req.Post(url, req.BodyJSON(tokens))
 	if err != nil {
-		return GotPrices{}, fmt.Errorf("can not make a request: %v", err)
+		return storage.GotPrices{}, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	gotPrices := GotPrices{}
+	gotPrices := storage.GotPrices{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
-		return GotPrices{}, fmt.Errorf("can not marshal: %v", err)
+		return storage.GotPrices{}, fmt.Errorf("can not marshal: %v", err)
 	}
 
 	return gotPrices, nil
