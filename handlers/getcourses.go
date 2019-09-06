@@ -2,10 +2,7 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/utils-tool_prices/services"
 	"github.com/utils-tool_prices/storage"
-	"log"
-	"sync"
 )
 
 type controller struct {
@@ -30,39 +27,8 @@ func (cr *controller) getCourses(c *gin.Context) {
 	//	c.JSON(http.StatusBadRequest, gin.H{"err": err})
 	//	return
 	//}
-
-	tokens := services.InitRequestData()
-	wg := sync.WaitGroup{}
-
-	var stors storage.ResultPrices
-
-	for _, t := range tokens.Tokens {
-		wg.Add(1)
-
-		go func(wg *sync.WaitGroup, st *storage.ResultPrices, t *services.TokensWithCurrency) {
-			defer wg.Done()
-
-			got, err := services.GetPricesCMC(t)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-
-			var store storage.Prices
-			for _, i := range got.Docs {
-				store.Currency = got.Currency
-				contract := map[string]string{i.Contract: i.Price}
-				store.Rates = append(store.Rates, &contract)
-			}
-
-			st.Update(store)
-
-		}(&wg, &stors, &t)
-		wg.Wait()
-	}
-
-
-	c.JSON(200, gin.H{"res": stors.Prices})
+	res := cr.store.Get()
+	c.JSON(200, gin.H{"res": res})
 }
 
 func (cr *controller) Mount(r *gin.Engine) {

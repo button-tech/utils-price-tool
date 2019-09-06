@@ -3,8 +3,6 @@ package services
 import (
 	"fmt"
 	"github.com/imroc/req"
-	"github.com/utils-tool_prices/storage"
-	"log"
 	"os"
 )
 
@@ -48,14 +46,15 @@ type DocsPrices struct {
 }
 
 type Service interface {
-	GetAllPricesCMC() *[]storage.Prices
+	//GetAllPricesCMC() *[]storage.Prices
+	GetPricesCMC(tokens *TokensWithCurrency) (GotPrices, error)
 }
 
 type service struct{}
 
-//func NewService() Service {
-//	return &service{}
-//}
+func NewService() Service {
+	return &service{}
+}
 
 func InitRequestData() TokensWithCurrencies {
 	tokensMultiCurrencies := TokensWithCurrencies{}
@@ -78,60 +77,7 @@ func InitRequestData() TokensWithCurrencies {
 	return tokensMultiCurrencies
 }
 
-func(s *service) GetAllPricesCMC() *storage.Prices {
-	tokens := InitRequestData()
-	got, err := GetPricesCMC(&tokens.Tokens[0])
-	if err != nil {
-		log.Println(err)
-		return nil
-	}
-	var store storage.Prices
-	for _, i := range got.Docs {
-		store.Currency = got.Currency
-		contract := map[string]string{i.Contract: i.Price}
-		store.Rates = append(store.Rates, &contract)
-	}
-
-
-	return &store
-}
-
-//func (s *service) GetAllPricesCMC() *[]storage.Prices {
-//	tokens := initRequestData()
-//	fmt.Println(len(tokens.Tokens))
-//
-//	var stored []storage.Prices
-//
-//	wg := sync.WaitGroup{}
-//
-//	for _, t := range tokens.Tokens {
-//		wg.Add(1)
-//
-//		go func(wg *sync.WaitGroup) {
-//			defer wg.Done()
-//
-//			var store storage.Prices
-//			got, err := GetPricesCMC(&t)
-//			if err != nil {
-//				log.Println(err)
-//			}
-//
-//			for _, i := range got.Docs {
-//				store.Currency = got.Currency
-//				contract := map[string]string{i.Contract: i.Price}
-//				store.Rates = append(store.Rates, &contract)
-//			}
-//
-//			stored = append(stored, store)
-//		}(&wg)
-//
-//	}
-//	wg.Wait()
-//
-//	return &stored
-//}
-
-func GetPricesCMC(tokens *TokensWithCurrency) (GotPrices, error) {
+func(s *service) GetPricesCMC(tokens *TokensWithCurrency) (GotPrices, error) {
 	url := os.Getenv("TRUST_URL")
 	rq, err := req.Post(url, req.BodyJSON(tokens))
 	if err != nil {

@@ -4,13 +4,14 @@ import "sync"
 
 
 type Prices struct {
+	mu sync.Mutex
 	Currency string               `json:"currency"`
 	Rates    []*map[string]string `json:"rates"`
 }
 
-type ResultPrices struct {
+type resultPrices struct {
 	mu     sync.Mutex
-	Prices []Prices
+	Prices *[]Prices
 }
 
 type Storage interface {
@@ -18,21 +19,23 @@ type Storage interface {
 	Get() *[]Prices
 }
 
-//func NewInMemoryStore() Storage {
-//	return &resultPrices{
-//		mu:     new(sync.Mutex),
-//		prices: new([]Prices),
-//	}
-//}
-
-func (r *ResultPrices) Update(res Prices) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.Prices = append(r.Prices, res)
+func NewInMemoryStore() Storage {
+	return &resultPrices{
+		mu:     sync.Mutex{},
+		Prices: new([]Prices),
+	}
 }
 
-//func (r *ResultPrices) Get() []*Prices {
-//	r.mu.Lock()
-//	defer r.mu.Unlock()
-//	return r.prices
-//}
+func(r *resultPrices) Update(res *[]Prices) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Prices = res
+}
+
+func(r *resultPrices) Get() *[]Prices {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.Prices
+}
+
+//func(st *Prices)
