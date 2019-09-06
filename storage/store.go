@@ -2,40 +2,37 @@ package storage
 
 import "sync"
 
-type ResultPrices struct {
-	Prices []*Prices
-}
 
 type Prices struct {
 	Currency string               `json:"currency"`
 	Rates    []*map[string]string `json:"rates"`
 }
 
-type resultPrices struct {
-	mu     *sync.Mutex
-	prices *ResultPrices
+type ResultPrices struct {
+	mu     sync.Mutex
+	Prices []Prices
 }
 
 type Storage interface {
-	Update(res *ResultPrices)
-	Get() *ResultPrices
+	Update(res *[]Prices)
+	Get() *[]Prices
 }
 
-func NewInMemoryStore() Storage {
-	return &resultPrices{
-		mu:     new(sync.Mutex),
-		prices: new(ResultPrices),
-	}
-}
+//func NewInMemoryStore() Storage {
+//	return &resultPrices{
+//		mu:     new(sync.Mutex),
+//		prices: new([]Prices),
+//	}
+//}
 
-func (r *resultPrices) Update(res *ResultPrices) {
+func (r *ResultPrices) Update(res Prices) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.prices = res
+	r.Prices = append(r.Prices, res)
 }
 
-func (r *resultPrices) Get() *ResultPrices {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.prices
-}
+//func (r *ResultPrices) Get() []*Prices {
+//	r.mu.Lock()
+//	defer r.mu.Unlock()
+//	return r.prices
+//}
