@@ -1,4 +1,4 @@
-module github.com/jeyldii/api
+module github.com/utils-tool_prices
 
 go 1.12
 
