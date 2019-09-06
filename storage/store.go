@@ -2,10 +2,7 @@ package storage
 
 import "sync"
 
-type Prices struct {
-	Currency string               `json:"currency"`
-	Rates    []*map[string]string `json:"rates"`
-}
+
 
 type storedPrices struct {
 	mu sync.Mutex

@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/utils-price-tool/storage"
+	"net/http"
 )
 
 type controller struct {
@@ -21,26 +22,29 @@ type dataTokensAndCurrencies struct {
 	API        string   `json:"api"`
 }
 
+// make Response, when no params
+type Prices struct {
+	Currency string               `json:"currency"`
+	Rates    []*map[string]string `json:"rates"`
+}
 
 func (cr *controller) getCourses(c *gin.Context) {
-	//resp := dataTokensAndCurrencies{}
-	//if err := c.ShouldBindJSON(&resp); err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"err": err})
-	//	return
-	//}
+	req := dataTokensAndCurrencies{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"err": err})
+		return
+	}
 
-	//var	result []storage.Prices
-	//forResult := storage.Prices{}
-	//
-	//stored := cr.store.Get()
-	//if len(resp.Currencies) == 3 {
-	//	for _, t := range resp.Tokens {
-	//		for _, st := range stored {
-	//
-	//		}
-	//	}
-	//}
+	var result []Prices
 	res := cr.store.Get()
+	for _, rc := req.Currencies {
+		for _, st := range res {
+
+		}
+	}
+
+
+
 
 	c.JSON(200, gin.H{"res": res})
 }
