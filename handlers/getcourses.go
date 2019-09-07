@@ -36,22 +36,73 @@ func (cr *controller) getCourses(c *gin.Context) {
 	}
 
 	var result []Prices
-	res := cr.store.Get()
-	for _, rc := req.Currencies {
-		for _, st := range res {
+	stored := cr.store.Get()
 
+	//if len(req.Currencies) == 3 {
+	//	var price Prices
+	//
+	//	for _, i := range req.Tokens {
+	//		for _, st := range stored {
+	//			price.Currency = st.Currency
+	//
+	//			for _, iSt := range st.Docs {
+	//				if iSt.Contract == i {
+	//					contract := map[string]string{i:iSt.Price}
+	//					price.Rates = append(price.Rates, &contract)
+	//				}
+	//			}
+	//		}
+	//	}
+	//
+	//	result = append(result, price)
+	//	c.JSON(200, gin.H{"data": &result})
+	//	return
+	//}
+	//
+
+	// if currencies 3
+	//if len(req.Currencies) == 3 {
+	//	for _, r := range req.Tokens {
+	//		for _, st := range stored {
+	//			var price Prices
+	//
+	//			for _, doc := range st.Docs {
+	//				price.Currency = st.Currency
+	//
+	//				if doc.Contract == r {
+	//					contract := map[string]string{r: doc.Price}
+	//					price.Rates = append(price.Rates, &contract)
+	//				}
+	//			}
+	//			result = append(result, price)
+	//		}
+	//	}
+	//}
+	//c.JSON(200, &result)
+	//return
+
+	for _, rc := range req.Tokens {
+		for _, st := range stored {
+			var price Prices
+			price.Currency = st.Currency
+			for _, iSt := range st.Docs {
+				if iSt.Contract == rc {
+					contract := map[string]string{rc: iSt.Price}
+					price.Rates = append(price.Rates, &contract)
+				}
+
+			}
+			result = append(result, price)
 		}
+
 	}
 
-
-
-
-	c.JSON(200, gin.H{"res": res})
+	c.JSON(200, gin.H{"data": &result})
 }
 
 func (cr *controller) Mount(r *gin.Engine) {
-	v1 := r.Group("/api")
+	v1 := r.Group("/api/v1/")
 	{
-		v1.GET("/prices", cr.getCourses)
+		v1.POST("/prices", cr.getCourses)
 	}
 }
