@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/utils-price-tool/storage"
 	"net/http"
+	"strings"
 )
 
 type controller struct {
@@ -22,24 +23,63 @@ type dataTokensAndCurrencies struct {
 	API        string   `json:"api"`
 }
 
-// make Response, when no params
-type Prices struct {
-	Currency string               `json:"currency"`
-	Rates    []*map[string]string `json:"rates"`
+// make Response for get prices
+type prices struct {
+	Currency      string               `json:"currency"`
+	Rates         []*map[string]string `json:"rates"`
+	PercentChange string               `json:"percent_change,omitempty"`
 }
 
-func (cr *controller) getCourses(c *gin.Context) {
+// make Response list API
+type listApi struct {
+	API []struct {
+		Name             string   `json:"name"`
+		SupportedChanges []string `json:"supported_changes"`
+		Time             struct {
+			Start int `json:"start"`
+			End   int `json:"end"`
+		} `json:"time"`
+	} `json:"api"`
+}
+
+func(cr *controller) getCourses(c *gin.Context) {
 	req := dataTokensAndCurrencies{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"err": err})
 		return
 	}
 
-	var result []Prices
+	var result []prices
 	stored := cr.store.Get()
 
+	if req.Change == "0" {
+		for _, rq := range req.Currencies {
+			price := prices{}
+
+			for _, st := range stored {
+				if rq == st.Currency {
+					price.Currency = rq
+
+					for _, t := range req.Tokens {
+						for _, st := range st.Docs {
+							if strings.ToLower(t) == st.Contract {
+								contract := map[string]string{t: st.Price}
+								price.Rates = append(price.Rates, &contract)
+							}
+						}
+					}
+				}
+			}
+
+			result = append(result, price)
+		}
+
+		c.JSON(200, gin.H{"data": &result})
+		return
+	}
+
 	for _, rq := range req.Currencies {
-		price := Prices{}
+		price := prices{}
 
 		for _, st := range stored {
 			if rq == st.Currency {
@@ -48,7 +88,8 @@ func (cr *controller) getCourses(c *gin.Context) {
 				for _, t := range req.Tokens {
 					for _, st := range st.Docs {
 						if t == st.Contract {
-							contract := map[string]string{t:st.Price}
+							contract := map[string]string{t: st.Price}
+							price.PercentChange = st.PercentChange24H
 							price.Rates = append(price.Rates, &contract)
 						}
 					}
@@ -58,12 +99,14 @@ func (cr *controller) getCourses(c *gin.Context) {
 
 		result = append(result, price)
 	}
-
-
 	c.JSON(200, gin.H{"data": &result})
 }
 
-func (cr *controller) Mount(r *gin.Engine) {
+func(cr *controller) list(c *gin.Context)  {
+	//
+}
+
+func(cr *controller) Mount(r *gin.Engine) {
 	v1 := r.Group("/api/v1/")
 	{
 		v1.POST("/prices", cr.getCourses)

@@ -16,7 +16,7 @@ func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.St
 		for _ = range ticker {
 			tokens := services.InitRequestData()
 
-			ch := make(chan storage.GotPrices, 3)
+			ch := make(chan storage.GotPrices, 4)
 			var stored []storage.GotPrices
 
 			for _, t := range tokens.Tokens {

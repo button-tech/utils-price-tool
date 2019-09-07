@@ -16,7 +16,7 @@ func main() {
 
 	store := storage.NewInMemoryStore()
 	serviceGetPrices := services.NewService()
-	tasks.NewGetGroupTask(time.Second * 5, serviceGetPrices, store)
+	tasks.NewGetGroupTask(time.Second*5, serviceGetPrices, store)
 	handlers.NewController(store).Mount(r)
 
 	if err := r.Run(":5000"); err != nil {
