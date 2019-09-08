@@ -51,63 +51,14 @@ func(cr *controller) getCourses(c *gin.Context) {
 		return
 	}
 
-	var result []prices
-	stored := cr.store.Get()
+	result := cr.converter(&req)
+	storeCRC := cr.storeCRC.Get()
 
-	if req.Change == "0" {
-		for _, rq := range req.Currencies {
-			price := prices{}
-
-			for _, st := range stored {
-				if rq == st.Currency {
-					price.Currency = rq
-
-					for _, t := range req.Tokens {
-						for _, st := range st.Docs {
-							if strings.ToLower(t) == st.Contract {
-								contract := map[string]string{t: st.Price}
-								price.Rates = append(price.Rates, &contract)
-							}
-						}
-					}
-				}
-			}
-
-			result = append(result, price)
-		}
-
-		//c.JSON(200, gin.H{"data": &result})
-		storeCRC := cr.storeCRC.Get()
-		c.JSON(200, gin.H{"data": storeCRC, "key": result})
-	}
-
-
-	//for _, rq := range req.Currencies {
-	//	price := prices{}
-	//
-	//	for _, st := range stored {
-	//		if rq == st.Currency {
-	//			price.Currency = rq
-	//
-	//			for _, t := range req.Tokens {
-	//				for _, st := range st.Docs {
-	//					if strings.ToLower(t) == st.Contract {
-	//						contract := map[string]string{t: st.Price}
-	//						price.PercentChange = st.PercentChange24H
-	//						price.Rates = append(price.Rates, &contract)
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-	//
-	//	result = append(result, price)
-	//}
-	//c.JSON(200, gin.H{"data": &result})
+	c.JSON(200, gin.H{"data": &result, "CRC": storeCRC})
 }
 
 func(cr *controller) list(c *gin.Context)  {
-
+//
 }
 
 func(cr *controller) Mount(r *gin.Engine) {
@@ -115,4 +66,32 @@ func(cr *controller) Mount(r *gin.Engine) {
 	{
 		v1.POST("/prices", cr.getCourses)
 	}
+}
+
+func(cr *controller) converter(req *dataTokensAndCurrencies) *[]prices {
+	var result []prices
+
+	stored := cr.store.Get()
+	for _, rq := range req.Currencies {
+		price := prices{}
+
+		for _, st := range stored {
+			if rq == st.Currency {
+				price.Currency = rq
+
+				for _, t := range req.Tokens {
+					for _, st := range st.Docs {
+						if strings.ToLower(t) == st.Contract {
+							contract := map[string]string{t: st.Price}
+							price.Rates = append(price.Rates, &contract)
+						}
+					}
+				}
+			}
+		}
+
+		result = append(result, price)
+	}
+
+	return  &result
 }

@@ -21,7 +21,7 @@ var convertedCurrencies = map[string]string{
 	"0x0000000000000000000000000000000000000002": "LTC",
 	"0x000000000000000000000000000000000000003D": "ETC",
 	"0x0000000000000000000000000000000000000091": "BCH",
-	"0x0000000000000000000000000000000000579BFC": "Waves",
+	"0x0000000000000000000000000000000000579BFC": "WAVES",
 	"0x0000000000000000000000000000000000000094": "XLM",
 	"0x00000000000000000000000000000000000000C2": "EOS",
 	"0x00000000000000000000000000000000000002CA": "BNB",
@@ -45,7 +45,7 @@ type TokensWithCurrencies struct {
 type Service interface {
 	GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error)
 	GetCRCPrices() (*[]storecrc.Result, error)
-	GetTop10List(c string) (storetoplist.Top10List, error)
+	//GetTop10List(c string) (storetoplist.Top10List, error)
 }
 
 type service struct{}
@@ -78,6 +78,7 @@ func InitRequestData() TokensWithCurrencies {
 // trust-wallet
 func (s *service) GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error) {
 	url := os.Getenv("TRUST_URL")
+
 	rq, err := req.Post(url, req.BodyJSON(tokens))
 	if err != nil {
 		return storage.GotPrices{}, fmt.Errorf("can not make a request: %v", err)
@@ -91,6 +92,7 @@ func (s *service) GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, e
 	return gotPrices, nil
 }
 
+// todo: complete
 func (s *service) GetTop10List(c string) (storetoplist.Top10List, error) {
 	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=10&convert=EUR"
 	params := req.Param{"convert": c}
@@ -122,13 +124,8 @@ func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	rqB, err := rq.ToString()
-	if err != nil {
-		return nil, fmt.Errorf("can not make bytes: %v", err)
-	}
-
 	var p fastjson.Parser
-	parsed, err := p.Parse(rqB)
+	parsed, err := p.ParseBytes(rq.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("can not parse: %v", err)
 	}
@@ -153,14 +150,20 @@ func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
 		eachCrypto := storecrc.Result{}
 		curr := storecrc.Currencies{}
 
-		eachCrypto.CryptoCurr = string(k)
-		strValue := v.String()
-		if err := json.Unmarshal([]byte(strValue), &curr); err != nil {
-			log.Printf("can not marshal elem: %s, %v", strValue, err)
-			return
+		for key, val := range convertedCurrencies {
+			if val == string(k) {
+				eachCrypto.CryptoCurr = key
+				strValue := v.String()
+				if err := json.Unmarshal([]byte(strValue), &curr); err != nil {
+					log.Printf("can not marshal elem: %s, %v", strValue, err)
+					return
+				}
+
+				eachCrypto.Curr = curr
+				cryptoResult = append(cryptoResult, eachCrypto)
+			}
 		}
-		eachCrypto.Curr = curr
-		cryptoResult = append(cryptoResult, eachCrypto)
+
 	})
 
 	if cryptoResult == nil {

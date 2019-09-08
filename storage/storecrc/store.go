@@ -4,7 +4,7 @@ import "sync"
 
 type Result struct {
 	CryptoCurr string
-	Curr Currencies
+	Curr       Currencies
 }
 
 type Currencies struct {
@@ -41,4 +41,3 @@ func (r *storedList) Get() []Result {
 	defer r.mu.Unlock()
 	return *r.Stored
 }
-
