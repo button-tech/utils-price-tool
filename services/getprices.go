@@ -7,6 +7,8 @@ import (
 	"github.com/utils-price-tool/storage"
 	"github.com/utils-price-tool/storage/storecrc"
 	"github.com/utils-price-tool/storage/storetoplist"
+	"github.com/valyala/fastjson"
+	"log"
 	"os"
 )
 
@@ -41,7 +43,7 @@ type TokensWithCurrencies struct {
 
 type Service interface {
 	GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error)
-	GetCRCPrices() (*[]map[string]storecrc.Currencies, error)
+	GetCRCPrices() (*[]storecrc.Result, error)
 	GetTop10List(c string) (storetoplist.Top10List, error)
 }
 
@@ -106,7 +108,7 @@ func (s *service) GetTop10List(c string) (storetoplist.Top10List, error) {
 }
 
 // get prices from crypto-compare
-func (s *service) GetCRCPrices() (*[]map[string]interface{}, error) {
+func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
 	url := "https://min-api.cryptocompare.com/data/pricemulti?tsyms=USD,EUR,RUB"
 	var forParams string
 	for _, k := range convertedCurrencies {
@@ -117,20 +119,40 @@ func (s *service) GetCRCPrices() (*[]map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
-	//crypto := new([]map[string]storecrc.Currencies)
-	crypto := new([]map[string]interface{})
-
-	rqB := rq.String()
-	err = json.Unmarshal([]byte(rqB), &crypto)
+	rqB, err := rq.ToString()
 	if err != nil {
-		return nil, fmt.Errorf("can not marshal: %v", err)
+		return nil, fmt.Errorf("can not make bytes: %v", err)
 	}
 
-	//if err = rq.ToJSON(&crypto); err != nil {
-	//	return nil, fmt.Errorf("can not marshal: %v", err)
-	//}
+	var p fastjson.Parser
+	parsed, err := p.Parse(rqB)
+	if err != nil {
+		return nil, fmt.Errorf("can not parse: %v", err)
+	}
 
-	return crypto, nil
+	o, err := parsed.Object()
+	if err != nil {
+		return nil, fmt.Errorf("can not make object: %v", err)
+	}
+
+	var cryptoResult []storecrc.Result
+
+	//todo: make func
+	o.Visit(func(k []byte, v *fastjson.Value) {
+		eachCrypto := storecrc.Result{}
+		curr := storecrc.Currencies{}
+
+		eachCrypto.CryptoCurr = string(k)
+		strValue := v.String()
+		if err = json.Unmarshal([]byte(strValue), &curr); err != nil {
+			log.Printf("can not marshal elem: %s, %v", strValue, err)
+			return
+		}
+		eachCrypto.Curr = curr
+		cryptoResult = append(cryptoResult, eachCrypto)
+	})
+
+	return &cryptoResult, nil
 }
 
 //func converter(s storage.Top10List) {

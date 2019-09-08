@@ -4,6 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/utils-price-tool/storage"
 	"github.com/utils-price-tool/storage/storecrc"
+	"net/http"
+	"strings"
 )
 
 type controller struct {
@@ -43,43 +45,43 @@ type listApi struct {
 }
 
 func(cr *controller) getCourses(c *gin.Context) {
-	//req := dataTokensAndCurrencies{}
-	//if err := c.ShouldBindJSON(&req); err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"err": err})
-	//	return
-	//}
+	req := dataTokensAndCurrencies{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"err": err})
+		return
+	}
 
-	//var result []prices
-	//stored := cr.store.Get()
-	//
-	//if req.Change == "0" {
-	//	for _, rq := range req.Currencies {
-	//		price := prices{}
-	//
-	//		for _, st := range stored {
-	//			if rq == st.Currency {
-	//				price.Currency = rq
-	//
-	//				for _, t := range req.Tokens {
-	//					for _, st := range st.Docs {
-	//						if strings.ToLower(t) == st.Contract {
-	//							contract := map[string]string{t: st.Price}
-	//							price.Rates = append(price.Rates, &contract)
-	//						}
-	//					}
-	//				}
-	//			}
-	//		}
-	//
-	//		result = append(result, price)
-	//	}
-	//
-	//	c.JSON(200, gin.H{"data": &result})
-	//
-	//}
+	var result []prices
+	stored := cr.store.Get()
 
-	storeCRC := cr.storeCRC.Get()
-	c.JSON(200, gin.H{"data": &storeCRC})
+	if req.Change == "0" {
+		for _, rq := range req.Currencies {
+			price := prices{}
+
+			for _, st := range stored {
+				if rq == st.Currency {
+					price.Currency = rq
+
+					for _, t := range req.Tokens {
+						for _, st := range st.Docs {
+							if strings.ToLower(t) == st.Contract {
+								contract := map[string]string{t: st.Price}
+								price.Rates = append(price.Rates, &contract)
+							}
+						}
+					}
+				}
+			}
+
+			result = append(result, price)
+		}
+
+		//c.JSON(200, gin.H{"data": &result})
+		storeCRC := cr.storeCRC.Get()
+		c.JSON(200, gin.H{"data": storeCRC, "key": result})
+	}
+
+
 	//for _, rq := range req.Currencies {
 	//	price := prices{}
 	//
