@@ -3,17 +3,83 @@ package tasks
 import (
 	"github.com/utils-price-tool/services"
 	"github.com/utils-price-tool/storage"
+	"github.com/utils-price-tool/storage/storecrc"
+	"github.com/utils-price-tool/storage/storetoplist"
 	"log"
 	"sync"
 	"time"
 )
 
-func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.Storage) {
-	ticker := time.Tick(timeout)
+//func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.Storage) {
+//	ticker := time.Tick(timeout)
+//	wg := sync.WaitGroup{}
+//
+//	go func() {
+//		for _ = range ticker {
+//			tokens := services.InitRequestData()
+//
+//			ch := make(chan storage.GotPrices, 4)
+//			var stored []storage.GotPrices
+//
+//			for _, t := range tokens.Tokens {
+//				wg.Add(1)
+//
+//				go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
+//					defer wg.Done()
+//
+//					got, err := s.GetPricesCMC(t)
+//					if err != nil {
+//						log.Println(err)
+//						return
+//					}
+//
+//					ch <- got
+//
+//				}(&wg, &t, ch)
+//				item := <- ch
+//				stored = append(stored, item)
+//			}
+//			wg.Wait()
+//			store.Update(&stored)
+//
+//		}
+//	}()
+//
+//	store.Get()
+//}
+
+type DuiCont struct {
+	TimeOut time.Duration
+	Service services.Service
+	Store storage.Storage
+	StoreList storetoplist.Storage
+	StoreCRC storecrc.Storage
+}
+
+func NewGetGroupTask(cont *DuiCont) {
+
+	ticker := time.Tick(cont.TimeOut)
 	wg := sync.WaitGroup{}
 
 	go func() {
 		for _ = range ticker {
+
+			// go to compare
+			go func() {
+				wg.Add(1)
+				defer wg.Done()
+
+				res, err := cont.Service.GetCRCPrices()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				cont.StoreCRC.Update(res)
+			}()
+
+
+			// go to trust-wallet
 			tokens := services.InitRequestData()
 
 			ch := make(chan storage.GotPrices, 4)
@@ -25,7 +91,7 @@ func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.St
 				go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
 					defer wg.Done()
 
-					got, err := s.GetPricesCMC(t)
+					got, err := cont.Service.GetPricesCMC(t)
 					if err != nil {
 						log.Println(err)
 						return
@@ -38,10 +104,11 @@ func NewGetGroupTask(timeout time.Duration, s services.Service, store storage.St
 				stored = append(stored, item)
 			}
 			wg.Wait()
-			store.Update(&stored)
+			cont.Store.Update(&stored)
 
 		}
 	}()
 
-	store.Get()
+	cont.Store.Get()
+	cont.StoreCRC.Get()
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/utils-price-tool/handlers"
 	"github.com/utils-price-tool/services"
 	"github.com/utils-price-tool/storage"
+	"github.com/utils-price-tool/storage/storecrc"
 	"github.com/utils-price-tool/tasks"
 
 	"log"
@@ -15,9 +16,19 @@ func main() {
 	r := gin.Default()
 
 	store := storage.NewInMemoryStore()
+	storeCRC := storecrc.NewInMemoryCRCStore()
 	serviceGetPrices := services.NewService()
-	tasks.NewGetGroupTask(time.Second*5, serviceGetPrices, store)
-	handlers.NewController(store).Mount(r)
+
+	// container
+	toTask := tasks.DuiCont{
+		TimeOut:   time.Second*5,
+		Service:   serviceGetPrices,
+		Store:     store,
+		StoreCRC:  storeCRC,
+	}
+
+	tasks.NewGetGroupTask(&toTask)
+	handlers.NewController(store, storeCRC).Mount(r)
 
 	if err := r.Run(":5000"); err != nil {
 		log.Fatal(err)

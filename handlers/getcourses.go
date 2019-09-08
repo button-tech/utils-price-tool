@@ -3,16 +3,16 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/utils-price-tool/storage"
-	"net/http"
-	"strings"
+	"github.com/utils-price-tool/storage/storecrc"
 )
 
 type controller struct {
 	store storage.Storage
+	storeCRC storecrc.Storage
 }
 
-func NewController(store storage.Storage) *controller {
-	return &controller{store}
+func NewController(store storage.Storage, storeCRC storecrc.Storage) *controller {
+	return &controller{store, storeCRC}
 }
 
 // data what to get
@@ -43,67 +43,69 @@ type listApi struct {
 }
 
 func(cr *controller) getCourses(c *gin.Context) {
-	req := dataTokensAndCurrencies{}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"err": err})
-		return
-	}
+	//req := dataTokensAndCurrencies{}
+	//if err := c.ShouldBindJSON(&req); err != nil {
+	//	c.JSON(http.StatusBadRequest, gin.H{"err": err})
+	//	return
+	//}
 
-	var result []prices
-	stored := cr.store.Get()
+	//var result []prices
+	//stored := cr.store.Get()
+	//
+	//if req.Change == "0" {
+	//	for _, rq := range req.Currencies {
+	//		price := prices{}
+	//
+	//		for _, st := range stored {
+	//			if rq == st.Currency {
+	//				price.Currency = rq
+	//
+	//				for _, t := range req.Tokens {
+	//					for _, st := range st.Docs {
+	//						if strings.ToLower(t) == st.Contract {
+	//							contract := map[string]string{t: st.Price}
+	//							price.Rates = append(price.Rates, &contract)
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//
+	//		result = append(result, price)
+	//	}
+	//
+	//	c.JSON(200, gin.H{"data": &result})
+	//
+	//}
 
-	if req.Change == "0" {
-		for _, rq := range req.Currencies {
-			price := prices{}
-
-			for _, st := range stored {
-				if rq == st.Currency {
-					price.Currency = rq
-
-					for _, t := range req.Tokens {
-						for _, st := range st.Docs {
-							if strings.ToLower(t) == st.Contract {
-								contract := map[string]string{t: st.Price}
-								price.Rates = append(price.Rates, &contract)
-							}
-						}
-					}
-				}
-			}
-
-			result = append(result, price)
-		}
-
-		c.JSON(200, gin.H{"data": &result})
-		return
-	}
-
-	for _, rq := range req.Currencies {
-		price := prices{}
-
-		for _, st := range stored {
-			if rq == st.Currency {
-				price.Currency = rq
-
-				for _, t := range req.Tokens {
-					for _, st := range st.Docs {
-						if t == st.Contract {
-							contract := map[string]string{t: st.Price}
-							price.PercentChange = st.PercentChange24H
-							price.Rates = append(price.Rates, &contract)
-						}
-					}
-				}
-			}
-		}
-
-		result = append(result, price)
-	}
-	c.JSON(200, gin.H{"data": &result})
+	storeCRC := cr.storeCRC.Get()
+	c.JSON(200, gin.H{"data": &storeCRC})
+	//for _, rq := range req.Currencies {
+	//	price := prices{}
+	//
+	//	for _, st := range stored {
+	//		if rq == st.Currency {
+	//			price.Currency = rq
+	//
+	//			for _, t := range req.Tokens {
+	//				for _, st := range st.Docs {
+	//					if strings.ToLower(t) == st.Contract {
+	//						contract := map[string]string{t: st.Price}
+	//						price.PercentChange = st.PercentChange24H
+	//						price.Rates = append(price.Rates, &contract)
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//
+	//	result = append(result, price)
+	//}
+	//c.JSON(200, gin.H{"data": &result})
 }
 
 func(cr *controller) list(c *gin.Context)  {
-	//
+
 }
 
 func(cr *controller) Mount(r *gin.Engine) {

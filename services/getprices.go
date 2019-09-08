@@ -1,9 +1,12 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/imroc/req"
 	"github.com/utils-price-tool/storage"
+	"github.com/utils-price-tool/storage/storecrc"
+	"github.com/utils-price-tool/storage/storetoplist"
 	"os"
 )
 
@@ -38,8 +41,8 @@ type TokensWithCurrencies struct {
 
 type Service interface {
 	GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error)
-	GetCRCPrices() (storage.CryptoCurrencies, error)
-	GetTopList() (storage.Top10List, error)
+	GetCRCPrices() (*[]map[string]storecrc.Currencies, error)
+	GetTop10List(c string) (storetoplist.Top10List, error)
 }
 
 type service struct{}
@@ -85,43 +88,51 @@ func (s *service) GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, e
 	return gotPrices, nil
 }
 
-// top list from coin-market-cap
-func (s *service) GetTopList() (storage.Top10List, error) {
-	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=10"
-	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")})
+func (s *service) GetTop10List(c string) (storetoplist.Top10List, error) {
+	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=10&convert=EUR"
+	params := req.Param{"convert": c}
+
+	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")}, params)
 	if err != nil {
-		return storage.Top10List{}, fmt.Errorf("can not make a request: %v", err)
+		return storetoplist.Top10List{}, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	list := storage.Top10List{}
+	list := storetoplist.Top10List{}
 	if err = rq.ToJSON(&list); err != nil {
-		return storage.Top10List{}, fmt.Errorf("can not marshal: %v", err)
+		return storetoplist.Top10List{}, fmt.Errorf("can not marshal: %v", err)
 	}
 
 	return list, nil
 }
 
 // get prices from crypto-compare
-func (s *service) GetCRCPrices() (storage.CryptoCurrencies, error) {
+func (s *service) GetCRCPrices() (*[]map[string]interface{}, error) {
 	url := "https://min-api.cryptocompare.com/data/pricemulti?tsyms=USD,EUR,RUB"
-	forParams := ""
+	var forParams string
 	for _, k := range convertedCurrencies {
 		forParams += k + ","
 	}
 
 	rq, err := req.Get(url, req.Param{"fsyms": forParams})
 	if err != nil {
-		return storage.CryptoCurrencies{}, fmt.Errorf("can not make a request: %v", err)
+		return nil, fmt.Errorf("can not make a request: %v", err)
+	}
+	//crypto := new([]map[string]storecrc.Currencies)
+	crypto := new([]map[string]interface{})
+
+	rqB := rq.String()
+	err = json.Unmarshal([]byte(rqB), &crypto)
+	if err != nil {
+		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
 
-	crypto := storage.CryptoCurrencies{}
-	if err = rq.ToJSON(&crypto); err != nil {
-		return storage.CryptoCurrencies{}, fmt.Errorf("can not marshal: %v", err)
-	}
+	//if err = rq.ToJSON(&crypto); err != nil {
+	//	return nil, fmt.Errorf("can not marshal: %v", err)
+	//}
 
 	return crypto, nil
 }
 
-func converter(s storage.Top10List) {
-
-}
+//func converter(s storage.Top10List) {
+//
+//}
