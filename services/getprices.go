@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/imroc/req"
 	"github.com/utils-price-tool/storage"
@@ -110,6 +111,7 @@ func (s *service) GetTop10List(c string) (storetoplist.Top10List, error) {
 // get prices from crypto-compare
 func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
 	url := "https://min-api.cryptocompare.com/data/pricemulti?tsyms=USD,EUR,RUB"
+
 	var forParams string
 	for _, k := range convertedCurrencies {
 		forParams += k + ","
@@ -119,6 +121,7 @@ func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
+
 	rqB, err := rq.ToString()
 	if err != nil {
 		return nil, fmt.Errorf("can not make bytes: %v", err)
@@ -135,16 +138,24 @@ func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
 		return nil, fmt.Errorf("can not make object: %v", err)
 	}
 
+	cryptoRes, err := cryptoResult(o)
+	if err != nil {
+		return nil, err
+	}
+
+	return cryptoRes, nil
+}
+
+func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
 	var cryptoResult []storecrc.Result
 
-	//todo: make func
 	o.Visit(func(k []byte, v *fastjson.Value) {
 		eachCrypto := storecrc.Result{}
 		curr := storecrc.Currencies{}
 
 		eachCrypto.CryptoCurr = string(k)
 		strValue := v.String()
-		if err = json.Unmarshal([]byte(strValue), &curr); err != nil {
+		if err := json.Unmarshal([]byte(strValue), &curr); err != nil {
 			log.Printf("can not marshal elem: %s, %v", strValue, err)
 			return
 		}
@@ -152,9 +163,9 @@ func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
 		cryptoResult = append(cryptoResult, eachCrypto)
 	})
 
+	if cryptoResult == nil {
+		return nil, errors.New("wrong with marshal")
+	}
+
 	return &cryptoResult, nil
 }
-
-//func converter(s storage.Top10List) {
-//
-//}
