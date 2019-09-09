@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/utils-price-tool/storage"
-	"github.com/utils-price-tool/storage/storecrc"
+	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"net/http"
 	"strings"
 )
