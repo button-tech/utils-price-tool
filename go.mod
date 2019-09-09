@@ -1,4 +1,4 @@
-module github.com/utils-price-tool
+module github.com/button-tech/utils-price-tool
 
 go 1.12
 

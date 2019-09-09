@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/gin-gonic/gin"
-	"github.com/utils-price-tool/storage"
-	"github.com/utils-price-tool/storage/storecrc"
 	"net/http"
 	"strings"
 )
@@ -52,9 +52,9 @@ func (cr *controller) getCourses(c *gin.Context) {
 	}
 
 	result := cr.converter(&req)
-	storeCRC := cr.storeCRC.Get()
+	//storeCRC := cr.storeCRC.Get()
 
-	c.JSON(200, gin.H{"data": &result, "CRC": storeCRC})
+	c.JSON(200, gin.H{"data": &result})
 }
 
 func (cr *controller) list(c *gin.Context) {

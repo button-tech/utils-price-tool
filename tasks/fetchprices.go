@@ -1,10 +1,10 @@
 package tasks
 
 import (
-	"github.com/utils-price-tool/services"
-	"github.com/utils-price-tool/storage"
-	"github.com/utils-price-tool/storage/storecrc"
-	"github.com/utils-price-tool/storage/storetoplist"
+	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/storage/storecrc"
+	"github.com/button-tech/utils-price-tool/storage/storetoplist"
 	"log"
 	"sync"
 	"time"
@@ -20,7 +20,7 @@ type DuiCont struct {
 
 type TickerMeta struct {
 	Start time.Time
-	End time.Time
+	End   time.Time
 }
 
 func NewGetGroupTask(cont *DuiCont) {

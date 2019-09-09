@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/button-tech/utils-price-tool/handlers"
+	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/storage/storecrc"
+	"github.com/button-tech/utils-price-tool/tasks"
 	"github.com/gin-gonic/gin"
-	"github.com/utils-price-tool/handlers"
-	"github.com/utils-price-tool/services"
-	"github.com/utils-price-tool/storage"
-	"github.com/utils-price-tool/storage/storecrc"
-	"github.com/utils-price-tool/tasks"
 
 	"log"
 	"time"

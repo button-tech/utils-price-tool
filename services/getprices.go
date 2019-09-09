@@ -1,13 +1,14 @@
 package services
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/storage/storecrc"
+	"github.com/button-tech/utils-price-tool/storage/storetoplist"
 	"github.com/imroc/req"
-	"github.com/utils-price-tool/storage"
-	"github.com/utils-price-tool/storage/storecrc"
-	"github.com/utils-price-tool/storage/storetoplist"
 	"github.com/valyala/fastjson"
 	"log"
 	"os"
@@ -170,4 +171,14 @@ func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
 	}
 
 	return &cryptoResult, nil
+}
+
+func Converter(s string) {
+	converted, err := hex.DecodeString(s)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	fmt.Println(string(converted))
 }
