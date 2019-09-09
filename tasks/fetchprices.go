@@ -28,11 +28,12 @@ func NewGetGroupTask(cont *DuiCont) {
 	wg := sync.WaitGroup{}
 
 	go func() {
-		for _ = range ticker {
+		for range ticker {
 
 			// go to compare
+
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 
 				res, err := cont.Service.GetCRCPrices()

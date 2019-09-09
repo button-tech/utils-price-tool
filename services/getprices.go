@@ -60,7 +60,7 @@ func InitRequestData() TokensWithCurrencies {
 	var tokens []Token
 	tokensOneCurrency := TokensWithCurrency{}
 
-	for k, _ := range convertedCurrencies {
+	for k := range convertedCurrencies {
 		token := Token{}
 		token.Contract = k
 		tokens = append(tokens, token)
