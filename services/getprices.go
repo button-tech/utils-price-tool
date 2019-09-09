@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/imroc/req"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/button-tech/utils-price-tool/storage/storetoplist"
+	"github.com/imroc/req"
 	"github.com/valyala/fastjson"
 	"log"
 	"os"
@@ -59,7 +59,7 @@ func InitRequestData() TokensWithCurrencies {
 	var tokens []Token
 	tokensOneCurrency := TokensWithCurrency{}
 
-	for k, _ := range convertedCurrencies {
+	for k := range convertedCurrencies {
 		token := Token{}
 		token.Contract = k
 		tokens = append(tokens, token)

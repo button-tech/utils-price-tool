@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
 )
@@ -33,16 +33,16 @@ type prices struct {
 }
 
 // make Response list API
-type listApi struct {
-	API []struct {
-		Name             string   `json:"name"`
-		SupportedChanges []string `json:"supported_changes"`
-		Time             struct {
-			Start int `json:"start"`
-			End   int `json:"end"`
-		} `json:"time"`
-	} `json:"api"`
-}
+//type listApi struct {
+//	API []struct {
+//		Name             string   `json:"name"`
+//		SupportedChanges []string `json:"supported_changes"`
+//		Time             struct {
+//			Start int `json:"start"`
+//			End   int `json:"end"`
+//		} `json:"time"`
+//	} `json:"api"`
+//}
 
 func (cr *controller) getCourses(c *gin.Context) {
 	req := dataTokensAndCurrencies{}
@@ -57,9 +57,9 @@ func (cr *controller) getCourses(c *gin.Context) {
 	c.JSON(200, gin.H{"data": &result, "CRC": storeCRC})
 }
 
-func (cr *controller) list(c *gin.Context) {
-	//
-}
+//func (cr *controller) list(c *gin.Context) {
+//	//
+//}
 
 func (cr *controller) Mount(r *gin.Engine) {
 	v1 := r.Group("/api/v1/")
