@@ -24,7 +24,7 @@ type Top10List struct {
 		Platform          interface{} `json:"platform"`
 		CmcRank           int         `json:"cmc_rank"`
 		LastUpdated       time.Time   `json:"last_updated"`
-		Quote             USD       `json:"quote"`
+		Quote             USD         `json:"quote"`
 	} `json:"data"`
 }
 

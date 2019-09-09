@@ -9,7 +9,7 @@ import (
 )
 
 type controller struct {
-	store storage.Storage
+	store    storage.Storage
 	storeCRC storecrc.Storage
 }
 
@@ -44,7 +44,7 @@ type listApi struct {
 	} `json:"api"`
 }
 
-func(cr *controller) getCourses(c *gin.Context) {
+func (cr *controller) getCourses(c *gin.Context) {
 	req := dataTokensAndCurrencies{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"err": err})
@@ -57,18 +57,18 @@ func(cr *controller) getCourses(c *gin.Context) {
 	c.JSON(200, gin.H{"data": &result, "CRC": storeCRC})
 }
 
-func(cr *controller) list(c *gin.Context)  {
-//
+func (cr *controller) list(c *gin.Context) {
+	//
 }
 
-func(cr *controller) Mount(r *gin.Engine) {
+func (cr *controller) Mount(r *gin.Engine) {
 	v1 := r.Group("/api/v1/")
 	{
 		v1.POST("/prices", cr.getCourses)
 	}
 }
 
-func(cr *controller) converter(req *dataTokensAndCurrencies) *[]prices {
+func (cr *controller) converter(req *dataTokensAndCurrencies) *[]prices {
 	var result []prices
 
 	stored := cr.store.Get()
@@ -93,5 +93,5 @@ func(cr *controller) converter(req *dataTokensAndCurrencies) *[]prices {
 		result = append(result, price)
 	}
 
-	return  &result
+	return &result
 }

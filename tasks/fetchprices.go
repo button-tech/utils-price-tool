@@ -11,15 +11,19 @@ import (
 )
 
 type DuiCont struct {
-	TimeOut time.Duration
-	Service services.Service
-	Store storage.Storage
+	TimeOut   time.Duration
+	Service   services.Service
+	Store     storage.Storage
 	StoreList storetoplist.Storage
-	StoreCRC storecrc.Storage
+	StoreCRC  storecrc.Storage
+}
+
+type TickerMeta struct {
+	Start time.Time
+	End time.Time
 }
 
 func NewGetGroupTask(cont *DuiCont) {
-
 	ticker := time.Tick(cont.TimeOut)
 	wg := sync.WaitGroup{}
 
@@ -39,7 +43,6 @@ func NewGetGroupTask(cont *DuiCont) {
 
 				cont.StoreCRC.Update(res)
 			}()
-
 
 			// go to trust-wallet
 			tokens := services.InitRequestData()
@@ -62,12 +65,12 @@ func NewGetGroupTask(cont *DuiCont) {
 					ch <- got
 
 				}(&wg, &t, ch)
-				item := <- ch
+				item := <-ch
 				stored = append(stored, item)
 			}
+
 			wg.Wait()
 			cont.Store.Update(&stored)
-
 		}
 	}()
 

@@ -163,7 +163,6 @@ func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
 				cryptoResult = append(cryptoResult, eachCrypto)
 			}
 		}
-
 	})
 
 	if cryptoResult == nil {
