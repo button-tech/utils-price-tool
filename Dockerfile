@@ -3,10 +3,7 @@ FROM golang:latest AS builder
 RUN mkdir /build
 ADD . /build
 WORKDIR /build
-
-ENV TRUST_URL=
-
-RUN go build -o bin/main .
+RUN  go build -o bin/main .
 
 FROM debian:latest
 COPY --from=builder /build/bin /app
