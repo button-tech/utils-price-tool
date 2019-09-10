@@ -62,7 +62,7 @@ func (cr *controller) getCourses(c *gin.Context) {
 //}
 
 func (cr *controller) Mount(r *gin.Engine) {
-	v1 := r.Group("/api/v1/")
+	v1 := r.Group("/courses/v1/")
 	{
 		v1.POST("/prices", cr.getCourses)
 	}
