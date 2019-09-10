@@ -51,7 +51,7 @@ func (cr *controller) getCourses(c *gin.Context) {
 		return
 	}
 
-	result := cr.converter(&req)
+	result := converter(&req, cr.store)
 	//storeCRC := cr.storeCRC.Get()
 
 	c.JSON(200, gin.H{"data": &result})
@@ -68,10 +68,10 @@ func (cr *controller) Mount(r *gin.Engine) {
 	}
 }
 
-func (cr *controller) converter(req *dataTokensAndCurrencies) *[]prices {
+func converter(req *dataTokensAndCurrencies, store storage.Storage) *[]prices {
 	var result []prices
 
-	stored := cr.store.Get()
+	stored := store.Get()
 	for _, rq := range req.Currencies {
 		price := prices{}
 

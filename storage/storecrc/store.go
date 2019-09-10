@@ -2,6 +2,22 @@ package storecrc
 
 import "sync"
 
+//type Result2 struct {
+//		USD map[string]Currency `json:"USD"`
+//		EUR map[string]Currency `json:"EUR"`
+//		RUB map[string]Currency `json:"RUB"`
+//}
+//
+//type Currency struct {
+//	PRICE           float64 `json:"PRICE"`
+//	CHANGE24HOUR    float64 `json:"CHANGE24HOUR"`
+//	CHANGEPCT24HOUR float64 `json:"CHANGEPCT24HOUR"`
+//	CHANGEPCTDAY    float64 `json:"CHANGEPCTDAY"`
+//	CHANGEPCTHOUR   float64 `json:"CHANGEPCTHOUR"`
+//}
+//
+
+//
 type Result struct {
 	CryptoCurr string
 	Curr       Currencies
