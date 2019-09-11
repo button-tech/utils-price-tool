@@ -25,28 +25,15 @@ type TickerMeta struct {
 
 func NewGetGroupTask(cont *DuiCont) {
 	ticker := time.Tick(cont.TimeOut)
+	wg := sync.WaitGroup{}
 
-	for ; true; <-ticker {
-		go func() {
-			wg := sync.WaitGroup{}
-
-			// go top list
-			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
-				defer wg.Done()
-				list, err := cont.Service.GetTopList()
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				cont.StoreList.Update(list)
-
-			}(&wg)
+	go func() {
+		for ; true; <-ticker {
 
 			// go to compare
+
 			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
+			go func() {
 				defer wg.Done()
 
 				res, err := cont.Service.GetCRCPrices()
@@ -56,43 +43,116 @@ func NewGetGroupTask(cont *DuiCont) {
 				}
 
 				cont.StoreCRC.Update(res)
-			}(&wg)
+			}()
 
 			// go to trust-wallet
 			tokens := services.InitRequestData()
 
 			ch := make(chan storage.GotPrices, 4)
-			stored := make([]storage.GotPrices, 0)
+			var stored []storage.GotPrices
 
-			go func() {
+			for _, t := range tokens.Tokens {
 				wg.Add(1)
 
-				for _, t := range tokens.Tokens {
-					wg.Add(1)
+				go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
+					defer wg.Done()
 
-					go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
-						defer wg.Done()
+					got, err := cont.Service.GetPricesCMC(t)
+					if err != nil {
+						log.Println(err)
+						return
+					}
 
-						got, err := cont.Service.GetPricesCMC(t)
-						if err != nil {
-							log.Println(err)
-							return
-						}
+					ch <- got
 
-						ch <- got
-
-					}(&wg, &t, ch)
-					item := <-ch
-					stored = append(stored, item)
-				}
-			}()
+				}(&wg, &t, ch)
+				item := <-ch
+				stored = append(stored, item)
+			}
 
 			wg.Wait()
 			cont.Store.Update(&stored)
-		}()
+		}
+	}()
 
-		cont.Store.Get()
-		cont.StoreCRC.Get()
-	}
-
+	cont.Store.Get()
+	cont.StoreCRC.Get()
 }
+
+//func NewGetGroupTask(cont *DuiCont) {
+//	ticker := time.Tick(cont.TimeOut)
+//	wg := sync.WaitGroup{}
+//
+//	go func() {
+//		for ; true; <-ticker {
+//			wg.Add(1)
+//			go func(cont *DuiCont, wg *sync.WaitGroup) {
+//
+//				// go top list
+//				wg.Add(1)
+//				go func(wg *sync.WaitGroup, cont *DuiCont) {
+//					defer wg.Done()
+//					list, err := cont.Service.GetTopList()
+//					if err != nil {
+//						log.Println(err)
+//						return
+//					}
+//
+//					cont.StoreList.Update(list)
+//
+//				}(wg, cont)
+//
+//				// go to compare
+//				wg.Add(1)
+//				go func(wg *sync.WaitGroup, cont *DuiCont) {
+//					defer wg.Done()
+//
+//					res, err := cont.Service.GetCRCPrices()
+//					if err != nil {
+//						log.Println(err)
+//						return
+//					}
+//
+//					cont.StoreCRC.Update(res)
+//				}(wg, cont)
+//
+//				// go to trust-wallet
+//				tokens := services.InitRequestData()
+//
+//				ch := make(chan storage.GotPrices, 4)
+//				stored := make([]storage.GotPrices, 0)
+//
+//				go func(wg *sync.WaitGroup, ch chan storage.GotPrices, cont *DuiCont) {
+//					wg.Add(1)
+//
+//					for _, t := range tokens.Tokens {
+//						wg.Add(1)
+//
+//						go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
+//							defer wg.Done()
+//
+//							got, err := cont.Service.GetPricesCMC(t)
+//							if err != nil {
+//								log.Println(err)
+//								return
+//							}
+//
+//							ch <- got
+//
+//						}(wg, &t, ch)
+//						item := <-ch
+//						stored = append(stored, item)
+//					}
+//				}(wg, ch, cont)
+//
+//				wg.Wait()
+//				cont.Store.Update(&stored)
+//			}(cont, &wg)
+//
+//		}
+//	}()
+//
+//	cont.Store.Get()
+//	cont.StoreCRC.Get()
+//
+//}
