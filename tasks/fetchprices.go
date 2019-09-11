@@ -26,8 +26,8 @@ type TickerMeta struct {
 func NewGetGroupTask(cont *DuiCont) {
 	ticker := time.Tick(cont.TimeOut)
 
-	go func() {
-		for range ticker {
+	for ; true; <-ticker {
+		go func() {
 			wg := sync.WaitGroup{}
 
 			// go top list
@@ -64,31 +64,35 @@ func NewGetGroupTask(cont *DuiCont) {
 			ch := make(chan storage.GotPrices, 4)
 			stored := make([]storage.GotPrices, 0)
 
-			for _, t := range tokens.Tokens {
+			go func() {
 				wg.Add(1)
 
-				go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
-					defer wg.Done()
+				for _, t := range tokens.Tokens {
+					wg.Add(1)
 
-					got, err := cont.Service.GetPricesCMC(t)
-					if err != nil {
-						log.Println(err)
-						return
-					}
+					go func(wg *sync.WaitGroup, t *services.TokensWithCurrency, ch chan storage.GotPrices) {
+						defer wg.Done()
 
-					ch <- got
+						got, err := cont.Service.GetPricesCMC(t)
+						if err != nil {
+							log.Println(err)
+							return
+						}
 
-				}(&wg, &t, ch)
-				item := <-ch
-				stored = append(stored, item)
-			}
+						ch <- got
+
+					}(&wg, &t, ch)
+					item := <-ch
+					stored = append(stored, item)
+				}
+			}()
 
 			wg.Wait()
 			cont.Store.Update(&stored)
-		}
-	}()
+		}()
 
-	cont.Store.Get()
-	cont.StoreCRC.Get()
-	cont.StoreList.Get()
+		cont.Store.Get()
+		cont.StoreCRC.Get()
+	}
+
 }

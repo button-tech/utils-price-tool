@@ -31,10 +31,10 @@ func main() {
 		StoreList: storeList,
 	}
 
-	tasks.NewGetGroupTask(&toTask)
+	go tasks.NewGetGroupTask(&toTask)
 	handlers.NewController(store, storeCRC, storeList).Mount(r)
 
-	if err := r.Run(":5000"); err != nil {
+	if err := r.Run(":5001"); err != nil {
 		log.Fatal(err)
 	}
 

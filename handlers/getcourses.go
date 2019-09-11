@@ -57,8 +57,12 @@ func (cr *controller) getCourses(c *gin.Context) {
 	//toplist := cr.list.Get()
 	//crc := cr.storeCRC.Get()
 	//
+	if result != nil {
+		c.JSON(200, gin.H{"data": result})
+		return
+	}
 
-	c.JSON(200, gin.H{"data": result})
+	c.JSON(http.StatusInternalServerError, gin.H{"error": "shutdown server"})
 }
 
 //func (cr *controller) list(c *gin.Context) {
@@ -73,7 +77,6 @@ func (cr *controller) Mount(r *gin.Engine) {
 }
 
 func (cr controller) converter(req *dataTokensAndCurrencies) *[]prices {
-
 	stored := cr.store.Get()
 	var result []prices
 
