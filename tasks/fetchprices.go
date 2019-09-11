@@ -25,15 +25,28 @@ type TickerMeta struct {
 
 func NewGetGroupTask(cont *DuiCont) {
 	ticker := time.Tick(cont.TimeOut)
-	wg := sync.WaitGroup{}
 
 	go func() {
 		for range ticker {
+			wg := sync.WaitGroup{}
+
+			// go top list
+			wg.Add(1)
+			go func(wg *sync.WaitGroup) {
+				defer wg.Done()
+				list, err := cont.Service.GetTopList()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+
+				cont.StoreList.Update(list)
+
+			}(&wg)
 
 			// go to compare
-
 			wg.Add(1)
-			go func() {
+			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 
 				res, err := cont.Service.GetCRCPrices()
@@ -43,13 +56,13 @@ func NewGetGroupTask(cont *DuiCont) {
 				}
 
 				cont.StoreCRC.Update(res)
-			}()
+			}(&wg)
 
 			// go to trust-wallet
 			tokens := services.InitRequestData()
 
 			ch := make(chan storage.GotPrices, 4)
-			var stored []storage.GotPrices
+			stored := make([]storage.GotPrices, 0)
 
 			for _, t := range tokens.Tokens {
 				wg.Add(1)
@@ -77,4 +90,5 @@ func NewGetGroupTask(cont *DuiCont) {
 
 	cont.Store.Get()
 	cont.StoreCRC.Get()
+	cont.StoreList.Get()
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type storedPrices struct {
-	mu     sync.Mutex
+	mu     *sync.Mutex
 	Stored *[]GotPrices
 }
 
@@ -28,7 +28,7 @@ type Storage interface {
 
 func NewInMemoryStore() Storage {
 	return &storedPrices{
-		mu:     sync.Mutex{},
+		mu:     new(sync.Mutex),
 		Stored: new([]GotPrices),
 	}
 }

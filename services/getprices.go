@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
@@ -45,8 +44,8 @@ type TokensWithCurrencies struct {
 
 type Service interface {
 	GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error)
-	GetCRCPrices() (*[]storecrc.Result, error)
-	//GetTop10List(c string) (storetoplist.Top10List, error)
+	GetCRCPrices() (map[string]storecrc.Cr, error)
+	GetTopList() (*storetoplist.TopList, error)
 }
 
 type service struct{}
@@ -57,7 +56,7 @@ func NewService() Service {
 
 func InitRequestData() TokensWithCurrencies {
 	tokensMultiCurrencies := TokensWithCurrencies{}
-	var tokens []Token
+	tokens := make([]Token, 0)
 	tokensOneCurrency := TokensWithCurrency{}
 
 	for k := range convertedCurrencies {
@@ -93,85 +92,83 @@ func (s *service) GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, e
 	return gotPrices, nil
 }
 
-// todo: complete
-func (s *service) GetTop10List(c string) (storetoplist.Top10List, error) {
-	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=10&convert=EUR"
-	params := req.Param{"convert": c}
+func (s *service) GetTopList() (*storetoplist.TopList, error) {
+	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=10&convert=USD"
 
-	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")}, params)
-	if err != nil {
-		return storetoplist.Top10List{}, fmt.Errorf("can not make a request: %v", err)
-	}
-
-	list := storetoplist.Top10List{}
-	if err = rq.ToJSON(&list); err != nil {
-		return storetoplist.Top10List{}, fmt.Errorf("can not marshal: %v", err)
-	}
-
-	return list, nil
-}
-
-// get prices from crypto-compare
-func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
-	url := "https://min-api.cryptocompare.com/data/pricemulti?tsyms=USD,EUR,RUB"
-
-	var forParams string
-	for _, k := range convertedCurrencies {
-		forParams += k + ","
-	}
-
-	rq, err := req.Get(url, req.Param{"fsyms": forParams})
+	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")})
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	var p fastjson.Parser
-	parsed, err := p.ParseBytes(rq.Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("can not parse: %v", err)
+	list := storetoplist.TopList{}
+	if err = rq.ToJSON(&list); err != nil {
+		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
 
-	o, err := parsed.Object()
-	if err != nil {
-		return nil, fmt.Errorf("can not make object: %v", err)
-	}
-
-	cryptoRes, err := cryptoResult(o)
-	if err != nil {
-		return nil, err
-	}
-
-	return cryptoRes, nil
+	return &list, nil
 }
 
-func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
-	var cryptoResult []storecrc.Result
+// get prices from crypto-compare
+//func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
+//	url := "https://min-api.cryptocompare.com/data/pricemulti?tsyms=USD,EUR,RUB"
+//
+//	var forParams string
+//	for _, k := range convertedCurrencies {
+//		forParams += k + ","
+//	}
+//
+//	rq, err := req.Get(url, req.Param{"fsyms": forParams})
+//	if err != nil {
+//		return nil, fmt.Errorf("can not make a request: %v", err)
+//	}
+//
+//	var p fastjson.Parser
+//	parsed, err := p.ParseBytes(rq.Bytes())
+//	if err != nil {
+//		return nil, fmt.Errorf("can not parse: %v", err)
+//	}
+//
+//	o, err := parsed.Object()
+//	if err != nil {
+//		return nil, fmt.Errorf("can not make object: %v", err)
+//	}
+//
+//	cryptoRes, err := cryptoResult(o)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return cryptoRes, nil
+//}
 
-	o.Visit(func(k []byte, v *fastjson.Value) {
-		eachCrypto := storecrc.Result{}
-		curr := storecrc.Currencies{}
-
-		for key, val := range convertedCurrencies {
-			if val == string(k) {
-				eachCrypto.CryptoCurr = key
-				strValue := v.String()
-				if err := json.Unmarshal([]byte(strValue), &curr); err != nil {
-					log.Printf("can not marshal elem: %s, %v", strValue, err)
-					return
-				}
-
-				eachCrypto.Curr = curr
-				cryptoResult = append(cryptoResult, eachCrypto)
-			}
-		}
-	})
-
-	if cryptoResult == nil {
-		return nil, errors.New("wrong with marshal")
-	}
-
-	return &cryptoResult, nil
-}
+//func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
+//	cryptoResult := make([]storecrc.Result, 0)
+//
+//	o.Visit(func(k []byte, v *fastjson.Value) {
+//		eachCrypto := storecrc.Result{}
+//		curr := storecrc.Currencies{}
+//
+//		for key, val := range convertedCurrencies {
+//			if val == string(k) {
+//				eachCrypto.CryptoCurr = key
+//				strValue := v.String()
+//				if err := json.Unmarshal([]byte(strValue), &curr); err != nil {
+//					log.Printf("can not marshal elem: %s, %v", strValue, err)
+//					return
+//				}
+//
+//				eachCrypto.Curr = curr
+//				cryptoResult = append(cryptoResult, eachCrypto)
+//			}
+//		}
+//	})
+//
+//	if cryptoResult == nil {
+//		return nil, errors.New("wrong with marshal")
+//	}
+//
+//	return &cryptoResult, nil
+//}
 
 func Converter(s string) {
 	converted, err := hex.DecodeString(s)
@@ -181,4 +178,45 @@ func Converter(s string) {
 	}
 
 	fmt.Println(string(converted))
+}
+
+func (s *service) GetCRCPrices() (map[string]storecrc.Cr, error) {
+	url := "https://min-api.cryptocompare.com/data/pricemultifull?tsyms=USD,EUR,RUB"
+
+	var forParams string
+	for _, k := range convertedCurrencies {
+		forParams += k + ","
+	}
+
+	rq, err := req.Get(url, req.Param{"fsyms": forParams})
+	if err != nil {
+		return nil, fmt.Errorf("can not make req: %v+", err)
+	}
+
+	strRq := rq.Bytes()
+
+	var p fastjson.Parser
+	parsed, err := p.ParseBytes(strRq)
+	if err != nil {
+		return nil, fmt.Errorf("can not parseBytes: %v+", err)
+	}
+
+	o := parsed.GetObject("RAW")
+	m := make(map[string]storecrc.Cr)
+	var cr storecrc.Cr
+
+	o.Visit(func(k []byte, v *fastjson.Value) {
+
+		if err = json.Unmarshal([]byte(v.String()), &cr); err != nil {
+			log.Printf("can not unmarshal elem: %v", v.String())
+		}
+
+		for t, c := range convertedCurrencies {
+			if c == string(k) {
+				m[t] = cr
+			}
+		}
+	})
+
+	return m, nil
 }
