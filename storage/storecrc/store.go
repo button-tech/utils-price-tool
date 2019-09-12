@@ -13,12 +13,11 @@ type Cr struct {
 }
 
 type Currency struct {
-	FROMSYMBOL      string  `json:"FROMSYMBOL"`
+	TOSYMBOL        string  `json:"TOSYMBOL"`
 	PRICE           float64 `json:"PRICE"`
-	CHANGE24HOUR    float64 `json:"CHANGE24HOUR"`
 	CHANGEPCT24HOUR float64 `json:"CHANGEPCT24HOUR"`
-	CHANGEPCTDAY    float64 `json:"CHANGEPCTDAY"`
-	CHANGEPCTHOUR   float64 `json:"CHANGEPCTHOUR"`
+	//CHANGEPCTDAY    float64 `json:"CHANGEPCTDAY"`
+	CHANGEPCTHOUR float64 `json:"CHANGEPCTHOUR"`
 }
 
 //
