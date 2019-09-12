@@ -32,21 +32,28 @@ type dataTokensAndCurrencies struct {
 // make Response for get prices
 type prices struct {
 	Currency      string              `json:"currency"`
-	Rates         []map[string]string `json:"rates"`
-	PercentChange string              `json:"percent_change,omitempty"`
+	Rates         []percentChanges `json:"rates"`
+	//PercentChange string              `json:"percent_change,omitempty"`
+}
+
+type percentChanges struct {
+	Rates map[string]string
+	PercentChange string `json:"percent_change,omitempty"`
 }
 
 // make Response list API
-//type listApi struct {
-//	API []struct {
-//		Name             string   `json:"name"`
-//		SupportedChanges []string `json:"supported_changes"`
-//		Time             struct {
-//			Start int `json:"start"`
-//			End   int `json:"end"`
-//		} `json:"time"`
-//	} `json:"api"`
-//}
+type listApi struct {
+	API []API  `json:"api"`
+		//Time             struct {
+		//	Start int `json:"start"`
+		//	End   int `json:"end"`
+		//} `json:"time"`
+}
+
+type API struct {
+	Name             string   `json:"name"`
+	SupportedChanges []string `json:"supported_changes"`
+}
 
 func (cr *controller) getCourses(c *gin.Context) {
 	req := dataTokensAndCurrencies{}
@@ -55,36 +62,61 @@ func (cr *controller) getCourses(c *gin.Context) {
 		return
 	}
 
-	//result := cr.storeCRC.Get()
-	//c.JSON(200, gin.H{"data": &res})
+	switch req.API {
+	case "cmc":
+		result, err := cr.converterCMCW(&req)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no matches API changes"})
+			return
+		}
+		c.JSON(200, gin.H{"data": &result})
+		return
 
-	result, err := cr.converter(&req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "shutdown server"})
+	case "crc":
+		result, err := cr.converterCRC(&req)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "no matches API changes"})
+			return
+		}
+
+		c.JSON(200, gin.H{"data": &result})
 		return
 	}
 
-	c.JSON(200, gin.H{"data": &result})
 }
 
-//func (cr *controller) list(c *gin.Context) {
-//	//
-//}
+func (cr *controller) apiInfo(c *gin.Context) {
+	supportedCRC := []string{"0", "1", "24"}
+	crc := API{
+		Name:             "crc",
+		SupportedChanges: supportedCRC,
+	}
+
+	supportedCMC := []string{"24"}
+	cmc := API{
+		Name:             "cmc",
+		SupportedChanges: supportedCMC,
+	}
+
+	API := []API{crc, cmc}
+	list := listApi{API:API}
+
+	c.JSON(200, gin.H{"api": list})
+}
 
 func (cr *controller) Mount(r *gin.Engine) {
 	v1 := r.Group("/courses/v1/")
 	{
 		v1.POST("/prices", cr.getCourses)
+		v1.GET("/list", cr.apiInfo)
 	}
 }
 
-func (cr controller) converter(req *dataTokensAndCurrencies) (*[]prices, error) {
+func (cr *controller) converterCMCW(req *dataTokensAndCurrencies) (*[]prices, error) {
 	result := make([]prices, 0)
+	stored := cr.store.Get()
 
-	switch req.API {
-	case "cmc":
-		stored := cr.store.Get()
-
+	if req.Change == "24" || req.Change == "" {
 		for _, rq := range req.Currencies {
 			price := prices{}
 
@@ -94,9 +126,13 @@ func (cr controller) converter(req *dataTokensAndCurrencies) (*[]prices, error) 
 
 					for _, t := range req.Tokens {
 						for _, st := range st.Docs {
+							pctChanges := percentChanges{}
+
 							if strings.ToLower(t) == st.Contract {
 								contract := map[string]string{t: st.Price}
-								price.Rates = append(price.Rates, contract)
+								pctChanges.Rates = contract
+								pctChanges.PercentChange = st.PercentChange24H
+								price.Rates = append(price.Rates, pctChanges)
 							}
 						}
 					}
@@ -107,9 +143,17 @@ func (cr controller) converter(req *dataTokensAndCurrencies) (*[]prices, error) 
 		}
 
 		return &result, nil
+	}
 
-	case "crc":
-		//res, _ := cr.converterCRCWithChanges(req)
+	return nil, errors.New("no matches API changes")
+}
+
+
+func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, error) {
+	result := make([]prices, 0)
+
+	switch req.Change {
+	case "0", "":
 		stored := cr.storeCRC.Get()
 
 		for _, curr := range req.Currencies {
@@ -120,78 +164,49 @@ func (cr controller) converter(req *dataTokensAndCurrencies) (*[]prices, error) 
 				case pr.USD.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 
 				case pr.EUR.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 
 				case pr.RUB.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 				}
 			}
+
 			result = append(result, price)
 		}
 
 		return &result, nil
 
-	default:
-		return nil, errors.New("no matches API")
-	}
-}
-
-func (cr *controller) converterCMCWithChanges(req *dataTokensAndCurrencies) (*[]prices, error) {
-	result := make([]prices, 0)
-
-	stored := cr.store.Get()
-
-	for _, rq := range req.Currencies {
-		price := prices{}
-
-		for _, st := range stored {
-			if rq == st.Currency {
-				price.Currency = rq
-
-				for _, t := range req.Tokens {
-					for _, st := range st.Docs {
-						if strings.ToLower(t) == st.Contract {
-							contract := map[string]string{t: st.Price}
-							price.Rates = append(price.Rates, contract)
-						}
-					}
-				}
-			}
-		}
-
-		result = append(result, price)
-	}
-
-	return &result, nil
-
-}
-
-func (cr *controller) converterCRCWithChanges(req *dataTokensAndCurrencies) (*[]prices, error) {
-	result := make([]prices, 0)
-
-	switch req.Change {
 	case "1":
 		stored := cr.storeCRC.Get()
 
@@ -203,37 +218,47 @@ func (cr *controller) converterCRCWithChanges(req *dataTokensAndCurrencies) (*[]
 				case pr.USD.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
-							price.PercentChange = strconv.FormatFloat(pr.USD.CHANGEPCTHOUR, 'f', 2, 64)
 							strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							pctChanges.PercentChange = strconv.FormatFloat(pr.USD.CHANGEPCTHOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 
 				case pr.EUR.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
-							price.PercentChange = strconv.FormatFloat(pr.EUR.CHANGEPCTHOUR, 'f', 2, 64)
 							strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							pctChanges.PercentChange = strconv.FormatFloat(pr.EUR.CHANGEPCTHOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 
 				case pr.RUB.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
-							price.PercentChange = strconv.FormatFloat(pr.RUB.CHANGEPCTHOUR, 'f', 2, 64)
 							strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							pctChanges.PercentChange = strconv.FormatFloat(pr.RUB.CHANGEPCTHOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 				}
 			}
+
 			result = append(result, price)
 		}
 
@@ -250,37 +275,47 @@ func (cr *controller) converterCRCWithChanges(req *dataTokensAndCurrencies) (*[]
 				case pr.USD.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
-							price.PercentChange = strconv.FormatFloat(pr.USD.CHANGEPCT24HOUR, 'f', 2, 64)
 							strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							pctChanges.PercentChange = strconv.FormatFloat(pr.USD.CHANGEPCT24HOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 
 				case pr.EUR.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
-							price.PercentChange = strconv.FormatFloat(pr.EUR.CHANGEPCT24HOUR, 'f', 2, 64)
 							strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							pctChanges.PercentChange = strconv.FormatFloat(pr.EUR.CHANGEPCT24HOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 
 				case pr.RUB.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
+						pctChanges := percentChanges{}
+
 						if rqCrypto == t {
-							price.PercentChange = strconv.FormatFloat(pr.RUB.CHANGEPCT24HOUR, 'f', 2, 64)
 							strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							price.Rates = append(price.Rates, rate)
+							pctChanges.Rates = rate
+							pctChanges.PercentChange = strconv.FormatFloat(pr.RUB.CHANGEPCT24HOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, pctChanges)
 						}
 					}
 				}
 			}
+
 			result = append(result, price)
 		}
 

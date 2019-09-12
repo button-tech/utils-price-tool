@@ -24,7 +24,7 @@ func main() {
 
 	// container
 	toTask := tasks.DuiCont{
-		TimeOut:   time.Minute * 7,
+		TimeOut:   time.Second * 3,
 		Service:   serviceGetPrices,
 		Store:     store,
 		StoreCRC:  storeCRC,
@@ -32,6 +32,7 @@ func main() {
 	}
 
 	go tasks.NewGetGroupTask(&toTask)
+	//fmt.Println(runtime.NumGoroutine())
 	handlers.NewController(store, storeCRC, storeList).Mount(r)
 
 	if err := r.Run(":5000"); err != nil {
