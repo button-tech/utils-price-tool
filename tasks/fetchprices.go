@@ -3,9 +3,9 @@ package tasks
 import (
 	"fmt"
 	"github.com/button-tech/utils-price-tool/services"
-	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/button-tech/utils-price-tool/storage/storetoplist"
+	"github.com/button-tech/utils-price-tool/storage/storetrustwallet"
 	"log"
 	"runtime"
 	"sync"
@@ -15,7 +15,7 @@ import (
 type DuiCont struct {
 	TimeOut   time.Duration
 	Service   services.Service
-	Store     storage.Storage
+	Store     storetrustwallet.Storage
 	StoreList storetoplist.Storage
 	StoreCRC  storecrc.Storage
 }
@@ -50,8 +50,8 @@ func NewGetGroupTask(cont *DuiCont) {
 			// go to trust-wallet
 			tokens := services.InitRequestData()
 
-			ch := make(chan storage.GotPrices, 10)
-			var stored []storage.GotPrices
+			ch := make(chan storetrustwallet.GotPrices, 10)
+			var stored []storetrustwallet.GotPrices
 
 			for _, t := range tokens.Tokens {
 					got, err := cont.Service.GetPricesCMC(&t)

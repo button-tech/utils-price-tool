@@ -1,10 +1,10 @@
-package handlers
+package controllers
 
 import (
 	"errors"
-	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/button-tech/utils-price-tool/storage/storetoplist"
+	"github.com/button-tech/utils-price-tool/storage/storetrustwallet"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -12,12 +12,12 @@ import (
 )
 
 type controller struct {
-	store    storage.Storage
+	store    storetrustwallet.Storage
 	storeCRC storecrc.Storage
 	list     storetoplist.Storage
 }
 
-func NewController(store storage.Storage, storeCRC storecrc.Storage, list storetoplist.Storage) *controller {
+func NewController(store storetrustwallet.Storage, storeCRC storecrc.Storage, list storetoplist.Storage) *controller {
 	return &controller{store, storeCRC, list}
 }
 
@@ -43,14 +43,14 @@ type percentChanges struct {
 
 // make Response list API
 type listApi struct {
-	API []API  `json:"api"`
+	API []api  `json:"api"`
 		//Time             struct {
 		//	Start int `json:"start"`
 		//	End   int `json:"end"`
 		//} `json:"time"`
 }
 
-type API struct {
+type api struct {
 	Name             string   `json:"name"`
 	SupportedChanges []string `json:"supported_changes"`
 }
@@ -87,21 +87,21 @@ func (cr *controller) getCourses(c *gin.Context) {
 
 func (cr *controller) apiInfo(c *gin.Context) {
 	supportedCRC := []string{"0", "1", "24"}
-	crc := API{
+	crc := api{
 		Name:             "crc",
 		SupportedChanges: supportedCRC,
 	}
 
 	supportedCMC := []string{"24"}
-	cmc := API{
+	cmc := api{
 		Name:             "cmc",
 		SupportedChanges: supportedCMC,
 	}
 
-	API := []API{crc, cmc}
+	API := []api{crc, cmc}
 	list := listApi{API:API}
 
-	c.JSON(200, gin.H{"api": list})
+	c.JSON(200, &list)
 }
 
 func (cr *controller) Mount(r *gin.Engine) {
@@ -138,7 +138,6 @@ func (cr *controller) converterCMCW(req *dataTokensAndCurrencies) (*[]prices, er
 					}
 				}
 			}
-
 			result = append(result, price)
 		}
 
@@ -201,7 +200,6 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 					}
 				}
 			}
-
 			result = append(result, price)
 		}
 
@@ -258,7 +256,6 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 					}
 				}
 			}
-
 			result = append(result, price)
 		}
 

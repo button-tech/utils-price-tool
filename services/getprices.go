@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/button-tech/utils-price-tool/storage/storetoplist"
+	"github.com/button-tech/utils-price-tool/storage/storetrustwallet"
 	"github.com/imroc/req"
 	"github.com/valyala/fastjson"
 	"log"
@@ -37,13 +37,13 @@ type Token struct {
 	Contract string `json:"contract"`
 }
 
-// data to get prices to trust-wallet
+// Data to get prices to trust-wallet
 type TokensWithCurrencies struct {
 	Tokens []TokensWithCurrency
 }
 
 type Service interface {
-	GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error)
+	GetPricesCMC(tokens *TokensWithCurrency) (storetrustwallet.GotPrices, error)
 	GetCRCPrices() (map[string]storecrc.Cr, error)
 	GetTopList() (*storetoplist.TopList, error)
 }
@@ -54,6 +54,7 @@ func NewService() Service {
 	return &service{}
 }
 
+// Create from hard-code tokens request data
 func InitRequestData() TokensWithCurrencies {
 	tokensMultiCurrencies := TokensWithCurrencies{}
 	tokens := make([]Token, 0)
@@ -75,18 +76,18 @@ func InitRequestData() TokensWithCurrencies {
 	return tokensMultiCurrencies
 }
 
-// trust-wallet
-func (s *service) GetPricesCMC(tokens *TokensWithCurrency) (storage.GotPrices, error) {
+// Get prices from trust-wallet
+func (s *service) GetPricesCMC(tokens *TokensWithCurrency) (storetrustwallet.GotPrices, error) {
 	url := os.Getenv("TRUST_URL")
 
 	rq, err := req.Post(url, req.BodyJSON(tokens))
 	if err != nil {
-		return storage.GotPrices{}, fmt.Errorf("can not make a request: %v", err)
+		return storetrustwallet.GotPrices{}, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	gotPrices := storage.GotPrices{}
+	gotPrices := storetrustwallet.GotPrices{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
-		return storage.GotPrices{}, fmt.Errorf("can not marshal: %v", err)
+		return storetrustwallet.GotPrices{}, fmt.Errorf("can not marshal: %v", err)
 	}
 
 	return gotPrices, nil
@@ -180,6 +181,7 @@ func Converter(s string) {
 	fmt.Println(string(converted))
 }
 
+// Get prices from crypto-compare
 func (s *service) GetCRCPrices() (map[string]storecrc.Cr, error) {
 	url := "https://min-api.cryptocompare.com/data/pricemultifull?tsyms=USD,EUR,RUB"
 

@@ -2,9 +2,6 @@ package storecrc
 
 import "sync"
 
-type Res struct {
-	Res map[string]Cr
-}
 
 type Cr struct {
 	USD Currency `json:"USD"`
@@ -19,18 +16,6 @@ type Currency struct {
 	//CHANGEPCTDAY    float64 `json:"CHANGEPCTDAY"`
 	CHANGEPCTHOUR float64 `json:"CHANGEPCTHOUR"`
 }
-
-//
-//type Result struct {
-//	CryptoCurr string
-//	Curr       Currencies
-//}
-//
-//type Currencies struct {
-//	USD float64 `json:"USD"`
-//	EUR float64 `json:"EUR"`
-//	RUB float64 `json:"RUB"`
-//}
 
 type storedList struct {
 	mu     *sync.Mutex

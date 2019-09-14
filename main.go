@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/button-tech/utils-price-tool/handlers"
+	"github.com/button-tech/utils-price-tool/controllers"
 	"github.com/button-tech/utils-price-tool/services"
-	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/button-tech/utils-price-tool/storage/storetoplist"
+	"github.com/button-tech/utils-price-tool/storage/storetrustwallet"
 	"github.com/button-tech/utils-price-tool/tasks"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -17,14 +17,14 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	store := storage.NewInMemoryStore()
+	store := storetrustwallet.NewInMemoryStore()
 	storeCRC := storecrc.NewInMemoryCRCStore()
 	storeList := storetoplist.NewInMemoryListStore()
 	serviceGetPrices := services.NewService()
 
-	// container
+	// Container for tasks
 	toTask := tasks.DuiCont{
-		TimeOut:   time.Second * 3,
+		TimeOut:   time.Minute * 7,
 		Service:   serviceGetPrices,
 		Store:     store,
 		StoreCRC:  storeCRC,
@@ -33,7 +33,7 @@ func main() {
 
 	go tasks.NewGetGroupTask(&toTask)
 	//fmt.Println(runtime.NumGoroutine())
-	handlers.NewController(store, storeCRC, storeList).Mount(r)
+	controllers.NewController(store, storeCRC, storeList).Mount(r)
 
 	if err := r.Run(":5000"); err != nil {
 		log.Fatal(err)
