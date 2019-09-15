@@ -37,7 +37,7 @@ type prices struct {
 }
 
 type percentChanges struct {
-	Rates map[string]string
+	Rates map[string]string `json:"rate"`
 	PercentChange string `json:"percent_change,omitempty"`
 }
 
