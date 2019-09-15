@@ -26,7 +26,7 @@ type Storage interface {
 	Get() []GotPrices
 }
 
-func NewInMemoryStore() Storage {
+func NewInMemoryCMCStore() Storage {
 	return &storedPrices{
 		mu:     new(sync.Mutex),
 		Stored: new([]GotPrices),

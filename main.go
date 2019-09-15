@@ -17,7 +17,7 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	store := storetrustwallet.NewInMemoryStore()
+	store := storetrustwallet.NewInMemoryCMCStore()
 	storeCRC := storecrc.NewInMemoryCRCStore()
 	storeList := storetoplist.NewInMemoryListStore()
 	serviceGetPrices := services.NewService()

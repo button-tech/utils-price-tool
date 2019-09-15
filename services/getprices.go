@@ -109,39 +109,6 @@ func (s *service) GetTopList() (*storetoplist.TopList, error) {
 	return &list, nil
 }
 
-// get prices from crypto-compare
-//func (s *service) GetCRCPrices() (*[]storecrc.Result, error) {
-//	url := "https://min-api.cryptocompare.com/data/pricemulti?tsyms=USD,EUR,RUB"
-//
-//	var forParams string
-//	for _, k := range convertedCurrencies {
-//		forParams += k + ","
-//	}
-//
-//	rq, err := req.Get(url, req.Param{"fsyms": forParams})
-//	if err != nil {
-//		return nil, fmt.Errorf("can not make a request: %v", err)
-//	}
-//
-//	var p fastjson.Parser
-//	parsed, err := p.ParseBytes(rq.Bytes())
-//	if err != nil {
-//		return nil, fmt.Errorf("can not parse: %v", err)
-//	}
-//
-//	o, err := parsed.Object()
-//	if err != nil {
-//		return nil, fmt.Errorf("can not make object: %v", err)
-//	}
-//
-//	cryptoRes, err := cryptoResult(o)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return cryptoRes, nil
-//}
-
 //func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
 //	cryptoResult := make([]storecrc.Result, 0)
 //
