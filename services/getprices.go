@@ -109,35 +109,6 @@ func (s *service) GetTopList() (*storetoplist.TopList, error) {
 	return &list, nil
 }
 
-//func cryptoResult(o *fastjson.Object) (*[]storecrc.Result, error) {
-//	cryptoResult := make([]storecrc.Result, 0)
-//
-//	o.Visit(func(k []byte, v *fastjson.Value) {
-//		eachCrypto := storecrc.Result{}
-//		curr := storecrc.Currencies{}
-//
-//		for key, val := range convertedCurrencies {
-//			if val == string(k) {
-//				eachCrypto.CryptoCurr = key
-//				strValue := v.String()
-//				if err := json.Unmarshal([]byte(strValue), &curr); err != nil {
-//					log.Printf("can not marshal elem: %s, %v", strValue, err)
-//					return
-//				}
-//
-//				eachCrypto.Curr = curr
-//				cryptoResult = append(cryptoResult, eachCrypto)
-//			}
-//		}
-//	})
-//
-//	if cryptoResult == nil {
-//		return nil, errors.New("wrong with marshal")
-//	}
-//
-//	return &cryptoResult, nil
-//}
-
 func Converter(s string) {
 	converted, err := hex.DecodeString(s)
 	if err != nil {
@@ -159,24 +130,32 @@ func (s *service) GetCRCPrices() (map[string]storecrc.Cr, error) {
 
 	rq, err := req.Get(url, req.Param{"fsyms": forParams})
 	if err != nil {
-		return nil, fmt.Errorf("can not make req: %v+", err)
+		return nil, fmt.Errorf("can not make req: %v", err)
 	}
 
-	strRq := rq.Bytes()
-
-	var p fastjson.Parser
-	parsed, err := p.ParseBytes(strRq)
+	byteRq := rq.Bytes()
+	m, err := crcFastJson(byteRq)
 	if err != nil {
-		return nil, fmt.Errorf("can not parseBytes: %v+", err)
+		return nil, fmt.Errorf("can not do fastJson: %v", err)
 	}
 
-	o := parsed.GetObject("RAW")
+	return m, nil
+}
+
+func crcFastJson(byteRq []byte) (map[string]storecrc.Cr, error) {
 	m := make(map[string]storecrc.Cr)
 	var cr storecrc.Cr
 
+	var p fastjson.Parser
+	parsed, err := p.ParseBytes(byteRq)
+	if err != nil {
+		return nil, fmt.Errorf("can not parseBytes: %v", err)
+	}
+
+	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
 
-		if err = json.Unmarshal([]byte(v.String()), &cr); err != nil {
+		if err := json.Unmarshal([]byte(v.String()), &cr); err != nil {
 			log.Printf("can not unmarshal elem: %v", v.String())
 		}
 

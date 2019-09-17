@@ -31,23 +31,22 @@ type dataTokensAndCurrencies struct {
 
 // make Response for get prices
 type prices struct {
-	Currency      string              `json:"currency"`
-	Rates         []percentChanges `json:"rates"`
-	//PercentChange string              `json:"percent_change,omitempty"`
+	Currency string           `json:"currency"`
+	Rates    []map[string]string `json:"rates"`
 }
 
 type percentChanges struct {
-	Rates map[string]string
-	PercentChange string `json:"percent_change,omitempty"`
+	Rates         map[string]string `json:"rate"`
+	PercentChange string            `json:"percent_change,omitempty"`
 }
 
 // make Response list API
 type listApi struct {
-	API []api  `json:"api"`
-		//Time             struct {
-		//	Start int `json:"start"`
-		//	End   int `json:"end"`
-		//} `json:"time"`
+	API []api `json:"api"`
+	//Time             struct {
+	//	Start int `json:"start"`
+	//	End   int `json:"end"`
+	//} `json:"time"`
 }
 
 type api struct {
@@ -64,7 +63,7 @@ func (cr *controller) getCourses(c *gin.Context) {
 
 	switch req.API {
 	case "cmc":
-		result, err := cr.converterCMCW(&req)
+		result, err := cr.converterCMC(&req)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "no matches API changes"})
 			return
@@ -99,7 +98,7 @@ func (cr *controller) apiInfo(c *gin.Context) {
 	}
 
 	API := []api{crc, cmc}
-	list := listApi{API:API}
+	list := listApi{API: API}
 
 	c.JSON(200, &list)
 }
@@ -112,11 +111,12 @@ func (cr *controller) Mount(r *gin.Engine) {
 	}
 }
 
-func (cr *controller) converterCMCW(req *dataTokensAndCurrencies) (*[]prices, error) {
+func (cr *controller) converterCMC(req *dataTokensAndCurrencies) (*[]prices, error) {
 	result := make([]prices, 0)
 	stored := cr.store.Get()
 
-	if req.Change == "24" || req.Change == "" {
+	switch req.Change {
+	case "24":
 		for _, rq := range req.Currencies {
 			price := prices{}
 
@@ -126,13 +126,11 @@ func (cr *controller) converterCMCW(req *dataTokensAndCurrencies) (*[]prices, er
 
 					for _, t := range req.Tokens {
 						for _, st := range st.Docs {
-							pctChanges := percentChanges{}
 
 							if strings.ToLower(t) == st.Contract {
 								contract := map[string]string{t: st.Price}
-								pctChanges.Rates = contract
-								pctChanges.PercentChange = st.PercentChange24H
-								price.Rates = append(price.Rates, pctChanges)
+								contract["percent_change"] = st.PercentChange24H
+								price.Rates = append(price.Rates, contract)
 							}
 						}
 					}
@@ -142,11 +140,35 @@ func (cr *controller) converterCMCW(req *dataTokensAndCurrencies) (*[]prices, er
 		}
 
 		return &result, nil
+
+	case "0", "":
+		for _, rq := range req.Currencies {
+			price := prices{}
+
+			for _, st := range stored {
+				if rq == st.Currency {
+					price.Currency = rq
+
+					for _, t := range req.Tokens {
+						for _, st := range st.Docs {
+
+							if strings.ToLower(t) == st.Contract {
+								contract := map[string]string{t: st.Price}
+								price.Rates = append(price.Rates, contract)
+							}
+						}
+					}
+				}
+			}
+			result = append(result, price)
+		}
+
+		return &result, nil
+
+	default:
+		return nil, errors.New("no matches API changes")
 	}
-
-	return nil, errors.New("no matches API changes")
 }
-
 
 func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, error) {
 	result := make([]prices, 0)
@@ -163,39 +185,33 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 				case pr.USD.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							price.Rates = append(price.Rates, pctChanges)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 
 				case pr.EUR.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							price.Rates = append(price.Rates, pctChanges)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 
 				case pr.RUB.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							price.Rates = append(price.Rates, pctChanges)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 				}
@@ -216,42 +232,36 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 				case pr.USD.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							pctChanges.PercentChange = strconv.FormatFloat(pr.USD.CHANGEPCTHOUR, 'f', 2, 64)
-							price.Rates = append(price.Rates, pctChanges)
+							rate["percent_change"] = strconv.FormatFloat(pr.USD.CHANGEPCTHOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 
 				case pr.EUR.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							pctChanges.PercentChange = strconv.FormatFloat(pr.EUR.CHANGEPCTHOUR, 'f', 2, 64)
-							price.Rates = append(price.Rates, pctChanges)
+							rate["percent_change"] = strconv.FormatFloat(pr.EUR.CHANGEPCTHOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 
 				case pr.RUB.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							pctChanges.PercentChange = strconv.FormatFloat(pr.RUB.CHANGEPCTHOUR, 'f', 2, 64)
-							price.Rates = append(price.Rates, pctChanges)
+							rate["percent_change"] = strconv.FormatFloat(pr.RUB.CHANGEPCTHOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 				}
@@ -272,42 +282,36 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 				case pr.USD.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							pctChanges.PercentChange = strconv.FormatFloat(pr.USD.CHANGEPCT24HOUR, 'f', 2, 64)
-							price.Rates = append(price.Rates, pctChanges)
+							rate["percent_change"] = strconv.FormatFloat(pr.USD.CHANGEPCT24HOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 
 				case pr.EUR.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							pctChanges.PercentChange = strconv.FormatFloat(pr.EUR.CHANGEPCT24HOUR, 'f', 2, 64)
-							price.Rates = append(price.Rates, pctChanges)
+							rate["percent_change"] = strconv.FormatFloat(pr.EUR.CHANGEPCT24HOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 
 				case pr.RUB.TOSYMBOL:
 					price.Currency = curr
 					for _, rqCrypto := range req.Tokens {
-						pctChanges := percentChanges{}
 
 						if rqCrypto == t {
 							strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
 							rate := map[string]string{t: strPrice}
-							pctChanges.Rates = rate
-							pctChanges.PercentChange = strconv.FormatFloat(pr.RUB.CHANGEPCT24HOUR, 'f', 2, 64)
-							price.Rates = append(price.Rates, pctChanges)
+							rate["percent_change"] = strconv.FormatFloat(pr.RUB.CHANGEPCT24HOUR, 'f', 2, 64)
+							price.Rates = append(price.Rates, rate)
 						}
 					}
 				}

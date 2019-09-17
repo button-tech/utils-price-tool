@@ -29,6 +29,16 @@ func NewGetGroupTask(cont *DuiCont) {
 	ticker := time.Tick(cont.TimeOut)
 	wg := sync.WaitGroup{}
 
+
+	//a, err := slip0044.AddTrustHexToSlip()
+	//if err != nil {
+	//	log.Println(err)
+	//}
+	//
+	//for _, i := range a {
+	//	fmt.Println(i)
+	//}
+
 	go func() {
 		for ; true; <-ticker {
 
