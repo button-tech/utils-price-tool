@@ -268,7 +268,7 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 			}
 			result = append(result, price)
 		}
-
+		
 		return &result, nil
 
 	case "24":

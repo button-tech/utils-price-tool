@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
@@ -107,16 +106,6 @@ func (s *service) GetTopList() (*storetoplist.TopList, error) {
 	}
 
 	return &list, nil
-}
-
-func Converter(s string) {
-	converted, err := hex.DecodeString(s)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	fmt.Println(string(converted))
 }
 
 // Get prices from crypto-compare
