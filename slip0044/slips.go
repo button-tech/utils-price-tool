@@ -3,18 +3,36 @@ package slip0044
 import (
 	"fmt"
 	"github.com/jeyldii/bip44"
+	"log"
 	"strconv"
 	"strings"
 )
 
+type TrustWalletSlips struct {
+	Contract string
+	CoinSymbol string
+}
 
-func AddTrustHexBySlip() () {
+func AddTrustHexBySlip() ([]*TrustWalletSlips, error) {
 	slip := bip44.Create()
 	constants := slip.Get()
 
-	for _, v := range constants {
+	trustWalletSlips := make([]*TrustWalletSlips, 0)
+	for i:=0; i<len(constants); i++ {
+		slipHexed, err := makeHexString(constants[i].Constant)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
 
+		trustWalletSlip := TrustWalletSlips{
+			Contract:   slipHexed,
+			CoinSymbol: constants[i].CoinSymbol,
+		}
+		trustWalletSlips = append(trustWalletSlips, &trustWalletSlip)
 	}
+
+	return trustWalletSlips, nil
 }
 
 func makeHexString(s string) (string, error) {

@@ -45,7 +45,7 @@ func NewGetGroupTask(cont *DuiCont) {
 			// go to compare
 
 			wg.Add(1)
-			go func() {
+			go func(wg *sync.WaitGroup) {
 				defer wg.Done()
 
 				res, err := cont.Service.GetCRCPrices()
@@ -55,7 +55,7 @@ func NewGetGroupTask(cont *DuiCont) {
 				}
 
 				cont.StoreCRC.Update(res)
-			}()
+			}(&wg)
 
 			// go to trust-wallet
 			tokens := services.InitRequestData()
@@ -64,12 +64,19 @@ func NewGetGroupTask(cont *DuiCont) {
 			var stored []storetrustwallet.GotPrices
 
 			for _, t := range tokens.Tokens {
-					got, err := cont.Service.GetPricesCMC(&t)
+				wg.Add(1)
+
+				go func(t *services.TokensWithCurrency, wg *sync.WaitGroup) {
+					defer wg.Done()
+
+					got, err := cont.Service.GetPricesCMC(t)
 					if err != nil {
 						log.Println(err)
 						return
 					}
+
 					ch <- got
+				}(&t, &wg)
 
 				item := <-ch
 				stored = append(stored, item)
