@@ -24,7 +24,7 @@ func main() {
 
 	// Container for tasks
 	toTask := tasks.DuiCont{
-		TimeOut:   time.Minute * 7,
+		TimeOut:   time.Second * 3,
 		Service:   serviceGetPrices,
 		Store:     store,
 		StoreCRC:  storeCRC,

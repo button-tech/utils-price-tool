@@ -2,14 +2,14 @@ package slip0044
 
 import (
 	"fmt"
-	"github.com/jeyldii/bip44"
+	"github.com/button-tech/bip44"
 	"log"
 	"strconv"
 	"strings"
 )
 
 type TrustWalletSlips struct {
-	Contract string
+	Contract   string
 	CoinSymbol string
 }
 
@@ -18,7 +18,7 @@ func AddTrustHexBySlip() ([]*TrustWalletSlips, error) {
 	constants := slip.Get()
 
 	trustWalletSlips := make([]*TrustWalletSlips, 0)
-	for i:=0; i<len(constants); i++ {
+	for i := 0; i < len(constants); i++ {
 		slipHexed, err := makeHexString(constants[i].Constant)
 		if err != nil {
 			log.Println(err)
@@ -49,7 +49,7 @@ func makeHexString(s string) (string, error) {
 	// Because cycle started by index 1
 	ss = append(ss, "0x0000000000000000000000000000000000000000")
 
-	for i:=1; i<len(splitter); i++ {
+	for i := 1; i < len(splitter); i++ {
 		toInt, err := strconv.Atoi(splitter[i])
 		if err != nil {
 			return "", fmt.Errorf("can not parseString: %v", err)
@@ -68,5 +68,3 @@ func makeHexString(s string) (string, error) {
 	hexString := address[:len(address)-len(ss)] + joined
 	return hexString, nil
 }
-
-

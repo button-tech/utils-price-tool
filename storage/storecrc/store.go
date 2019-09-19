@@ -2,8 +2,7 @@ package storecrc
 
 import "sync"
 
-
-type Cr struct {
+type Fiat struct {
 	USD Currency `json:"USD"`
 	EUR Currency `json:"EUR"`
 	RUB Currency `json:"RUB"`
@@ -13,34 +12,33 @@ type Currency struct {
 	TOSYMBOL        string  `json:"TOSYMBOL"`
 	PRICE           float64 `json:"PRICE"`
 	CHANGEPCT24HOUR float64 `json:"CHANGEPCT24HOUR"`
-	//CHANGEPCTDAY    float64 `json:"CHANGEPCTDAY"`
-	CHANGEPCTHOUR float64 `json:"CHANGEPCTHOUR"`
+	CHANGEPCTHOUR   float64 `json:"CHANGEPCTHOUR"`
 }
 
 type storedList struct {
 	mu     *sync.Mutex
-	Stored map[string]Cr
+	Stored map[string]Fiat
 }
 
 type Storage interface {
-	Update(res map[string]Cr)
-	Get() map[string]Cr
+	Update(res map[string]Fiat)
+	Get() map[string]Fiat
 }
 
 func NewInMemoryCRCStore() Storage {
 	return &storedList{
 		mu:     new(sync.Mutex),
-		Stored: make(map[string]Cr),
+		Stored: make(map[string]Fiat),
 	}
 }
 
-func (r *storedList) Update(res map[string]Cr) {
+func (r *storedList) Update(res map[string]Fiat) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.Stored = res
+	r.mu.Unlock()
 }
 
-func (r *storedList) Get() map[string]Cr {
+func (r *storedList) Get() map[string]Fiat {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.Stored

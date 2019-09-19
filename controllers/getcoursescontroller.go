@@ -31,13 +31,8 @@ type dataTokensAndCurrencies struct {
 
 // make Response for get prices
 type prices struct {
-	Currency string           `json:"currency"`
+	Currency string              `json:"currency"`
 	Rates    []map[string]string `json:"rates"`
-}
-
-type percentChanges struct {
-	Rates         map[string]string `json:"rate"`
-	PercentChange string            `json:"percent_change,omitempty"`
 }
 
 // make Response list API
@@ -111,7 +106,7 @@ func (cr *controller) Mount(r *gin.Engine) {
 	}
 }
 
-func (cr *controller) converterCMC(req *dataTokensAndCurrencies) (*[]prices, error) {
+func (cr *controller) converterCMC(req *dataTokensAndCurrencies) ([]prices, error) {
 	result := make([]prices, 0)
 	stored := cr.store.Get()
 
@@ -139,7 +134,7 @@ func (cr *controller) converterCMC(req *dataTokensAndCurrencies) (*[]prices, err
 			result = append(result, price)
 		}
 
-		return &result, nil
+		return result, nil
 
 	case "0", "":
 		for _, rq := range req.Currencies {
@@ -163,14 +158,14 @@ func (cr *controller) converterCMC(req *dataTokensAndCurrencies) (*[]prices, err
 			result = append(result, price)
 		}
 
-		return &result, nil
+		return result, nil
 
 	default:
 		return nil, errors.New("no matches API changes")
 	}
 }
 
-func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, error) {
+func (cr *controller) converterCRC(req *dataTokensAndCurrencies) ([]prices, error) {
 	result := make([]prices, 0)
 
 	switch req.Change {
@@ -219,7 +214,7 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 			result = append(result, price)
 		}
 
-		return &result, nil
+		return result, nil
 
 	case "1":
 		stored := cr.storeCRC.Get()
@@ -268,8 +263,8 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 			}
 			result = append(result, price)
 		}
-		
-		return &result, nil
+
+		return result, nil
 
 	case "24":
 		stored := cr.storeCRC.Get()
@@ -316,11 +311,10 @@ func (cr *controller) converterCRC(req *dataTokensAndCurrencies) (*[]prices, err
 					}
 				}
 			}
-
 			result = append(result, price)
 		}
 
-		return &result, nil
+		return result, nil
 
 	default:
 		return nil, errors.New("no matches API")

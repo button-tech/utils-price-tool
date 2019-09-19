@@ -40,8 +40,8 @@ func NewInMemoryListStore() Storage {
 
 func (r *storedList) Update(res *TopList) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.Stored = res
+	r.mu.Unlock()
 }
 
 func (r *storedList) Get() TopList {

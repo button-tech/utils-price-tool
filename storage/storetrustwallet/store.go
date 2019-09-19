@@ -6,7 +6,7 @@ import (
 
 type storedPrices struct {
 	mu     *sync.Mutex
-	Stored *[]GotPrices
+	Stored []*GotPrices
 }
 
 type GotPrices struct {
@@ -22,25 +22,25 @@ type DocsPrices struct {
 }
 
 type Storage interface {
-	Update(res *[]GotPrices)
-	Get() []GotPrices
+	Update(res []*GotPrices)
+	Get() []*GotPrices
 }
 
 func NewInMemoryCMCStore() Storage {
 	return &storedPrices{
 		mu:     new(sync.Mutex),
-		Stored: new([]GotPrices),
+		Stored: make([]*GotPrices, 0),
 	}
 }
 
-func (r *storedPrices) Update(res *[]GotPrices) {
+func (r *storedPrices) Update(res []*GotPrices) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.Stored = res
+	r.mu.Unlock()
 }
 
-func (r *storedPrices) Get() []GotPrices {
+func (r *storedPrices) Get() []*GotPrices {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return *r.Stored
+	return r.Stored
 }
