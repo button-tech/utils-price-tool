@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+//todo: rewrite at fast-http
+//todo: make one storage
+//todo: complete hexed functional
+//todo: debug fetch-task
+
 func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
