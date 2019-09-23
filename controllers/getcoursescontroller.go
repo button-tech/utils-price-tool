@@ -106,7 +106,7 @@ func (cr *controller) apiInfo(c *gin.Context) {
 func (cr *controller) Mount(r *gin.Engine) {
 	v1 := r.Group("/courses/v1/")
 	{
-		v1.POST("/response", cr.getCourses)
+		v1.POST("/prices", cr.getCourses)
 		v1.GET("/list", cr.apiInfo)
 	}
 }

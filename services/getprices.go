@@ -182,7 +182,6 @@ func crcFastJson(byteRq []byte) (map[string][]*Currency, error) {
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
 
-		fmt.Println(string(k))
 		currencies := make([]*Currency, 0)
 
 		fiats := v.GetObject()
@@ -191,6 +190,7 @@ func crcFastJson(byteRq []byte) (map[string][]*Currency, error) {
 
 			if err := json.Unmarshal([]byte(value.String()), &currency); err != nil {
 				log.Printf("can not unmarshal elem: %v", value.String())
+				return
 			}
 
 			for t, c := range convertedCurrencies {
