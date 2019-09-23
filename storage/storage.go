@@ -42,20 +42,16 @@ func NewCache() Cached {
 func (c *Cache) Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details) {
 	c.Lock()
 
-	for k, v := range cr {
-		for key, value := range c.items[a] {
-			key[k] = v
+	if _, ok := c.items[a]; !ok {
+		c.items[a] = map[Fiat]map[CryptoCurrency]*Details{}
+
+		for k, v := range cr {
+			c.items[a][k] = v
 		}
-	}
-
-
-	for k, v := range cr {
-		if val, ok := c.items[a]; ok {
-			val[k] = v
-		} else {
-			val[k] = v
+	} else {
+		for k, v := range cr {
+			c.items[a][k] = v
 		}
-
 	}
 
 	c.Unlock()
