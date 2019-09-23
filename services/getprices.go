@@ -160,18 +160,20 @@ func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*st
 		return nil, fmt.Errorf("can not do fastJson: %v", err)
 	}
 
-	details := storage.Details{}
+
 	fiatMap := make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details)
 	priceMap := make(map[storage.CryptoCurrency]*storage.Details)
 
 	for k, v := range m {
 		for _, i := range v {
+			details := storage.Details{}
+
 			details.Price = strconv.FormatFloat(1/i.PRICE, 'f', 2, 64)
 			details.ChangePCT24Hour = strconv.FormatFloat(i.CHANGEPCT24HOUR, 'f', 2, 64)
 			details.ChangePCTHour = strconv.FormatFloat(i.CHANGEPCTHOUR, 'f', 2, 64)
 
 			if _, ok := priceMap[storage.CryptoCurrency(i.TOSYMBOL)]; !ok {
-				priceMap = map[storage.CryptoCurrency]*storage.Details{}
+				priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &storage.Details{}
 			}
 			priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
 			//priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
