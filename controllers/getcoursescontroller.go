@@ -4,8 +4,6 @@ import (
 	"errors"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/gin-gonic/gin"
-	"net/http"
-	"strings"
 )
 
 type controller struct {
@@ -30,18 +28,6 @@ type prices struct {
 	Rates    []map[string]string `json:"rates"`
 }
 
-
-// Mapping stored prices with request tokens
-// Args have params:
-// [0]=currency, [1]=flag - to play with changes
-
-
-type percentChanges struct {
-	Rates map[string]string `json:"rate"`
-	PercentChange string `json:"percent_change,omitempty"`
-}
-
-
 // make Response list API
 type listApi struct {
 	API []api `json:"api"`
@@ -59,28 +45,27 @@ type api struct {
 func (cr *controller) getCourses(c *gin.Context) {
 	req := dataTokensAndCurrencies{}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"err": err})
+		c.JSON(400, gin.H{"err": err})
 		return
 	}
 
-
 	switch req.API {
 	case "cmc":
-		result, err := cr.converterCMC(&req)
+		result, err := cr.converter(&req, "cmc")
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "no matches API changes"})
+			c.JSON(400, gin.H{"error": "no matches API changes"})
 			return
 		}
-		c.JSON(200, gin.H{"data": &result})
+		c.JSON(200, gin.H{"data": result})
 
 	case "crc":
-		result, err := cr.converterCRC(&req)
+		result, err := cr.converter(&req, "crc")
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "no matches API changes"})
+			c.JSON(400, gin.H{"error": "no matches API changes"})
 			return
 		}
 
-		c.JSON(200, gin.H{"data": &result})
+		c.JSON(200, gin.H{"data": result})
 
 	default:
 		supportedCRC := []string{"0", "1", "24"}
@@ -98,9 +83,8 @@ func (cr *controller) getCourses(c *gin.Context) {
 		API := []api{crc, cmc}
 		list := listApi{API: API}
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": &list, "description": "please, use these API"})
+		c.JSON(400, gin.H{"error": &list, "description": "please, use these API"})
 	}
-
 }
 
 func (cr *controller) apiInfo(c *gin.Context) {
@@ -130,119 +114,64 @@ func (cr *controller) Mount(r *gin.Engine) {
 	}
 }
 
-func (cr *controller) converterCMC(req *dataTokensAndCurrencies) ([]prices, error) {
-	result := make([]prices, 0)
-	stored := cr.store.Get()["cmc"]
+func(cr *controller) mapping(req *dataTokensAndCurrencies, api, ch string) []*prices {
+	result := make([]*prices, 0)
+	stored := cr.store.Get()[storage.Api(api)]
 
-	switch req.Change {
+	for _, c := range req.Currencies {
+		price := prices{}
+
+		if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
+			price.Currency = c
+
+			for _, t := range req.Tokens {
+				if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
+					contract := map[string]string{t: val.Price}
+					price.Rates = append(price.Rates, changesControl(contract, val, ch))
+				}
+			}
+		}
+		result = append(result, &price)
+	}
+	return result
+}
+
+func changesControl(m map[string]string, s *storage.Details , c string) map[string]string {
+	switch c {
+	case "1":
+		m["percent_change"] = s.ChangePCTHour
+		return m
 	case "24":
-
-		for _, c := range req.Currencies {
-			price := prices{}
-
-			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
-				price.Currency = c
-
-				for _, t := range req.Tokens {
-					if val, ok := fiatVal[storage.CryptoCurrency(strings.ToLower(t))]; ok {
-						contract := map[string]string{t: val.Price}
-						contract["percent_change"] = val.ChangePCT24Hour
-						price.Rates = append(price.Rates, contract)
-					}
-				}
-			}
-			result = append(result, price)
-		}
-		return result, nil
-
-		case "0", "":
-		for _, c := range req.Currencies {
-			price := prices{}
-
-			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
-				price.Currency = c
-
-				for _, t := range req.Tokens {
-					if val, ok := fiatVal[storage.CryptoCurrency(strings.ToLower(t))]; ok {
-						contract := map[string]string{t: val.Price}
-						price.Rates = append(price.Rates, contract)
-					}
-				}
-			}
-			result = append(result, price)
-		}
-		return result, nil
-
+		m["percent_change"] = s.ChangePCT24Hour
+		return m
 	default:
-		return nil, errors.New("no matches API changes")
+		return m
 	}
 }
 
-func (cr *controller) converterCRC(req *dataTokensAndCurrencies) ([]*prices, error) {
-	result := make([]*prices, 0)
-
-	switch req.Change {
-	case "0", "":
-		stored := cr.store.Get()["crc"]
-
-		for _, c := range req.Currencies {
-			price := prices{}
-
-			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
-				price.Currency = c
-
-				for _, t := range req.Tokens {
-					if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
-						contract := map[string]string{t: val.Price}
-						price.Rates = append(price.Rates, contract)
-					}
-				}
-			}
-			result = append(result, &price)
+func (cr *controller) converter(req *dataTokensAndCurrencies, api string) ([]*prices, error) {
+	switch api {
+	case "cmc":
+		switch req.Change {
+		case "24":
+			return cr.mapping(req, "cmc", "24"), nil
+		case "0", "":
+			return cr.mapping(req, "cmc", "0"), nil
+		default:
+			return nil, errors.New("no matches API changes")
 		}
-		return result, nil
 
-	case "1":
-		stored := cr.store.Get()["crc"]
-
-		for _, c := range req.Currencies {
-			price := prices{}
-
-			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
-				price.Currency = c
-
-				for _, t := range req.Tokens {
-					if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
-						contract := map[string]string{t: val.Price}
-						contract["percent_change"] = val.ChangePCTHour
-						price.Rates = append(price.Rates, contract)
-					}
-				}
-			}
-			result = append(result, &price)
+	case "crc":
+		switch req.Change {
+		case "24":
+			return cr.mapping(req, "crc", "24"), nil
+		case "1":
+			return cr.mapping(req, "crc", "1"), nil
+		case "0", "":
+			return cr.mapping(req, "crc", "0"), nil
+		default:
+			return nil, errors.New("no matches API changes")
 		}
-		return result, nil
-
-	case "24":
-		stored := cr.store.Get()["crc"]
-
-		for _, c := range req.Currencies {
-			price := prices{}
-
-			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
-				price.Currency = c
-
-				for _, t := range req.Tokens {
-					if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
-						contract := map[string]string{t: val.Price}
-						contract["percent_change"] = val.ChangePCT24Hour
-						price.Rates = append(price.Rates, contract)
-					}
-				}
-			}
-			result = append(result, &price)
-		}
-		return result, nil
 
 	default:
 		return nil, errors.New("no matches API")

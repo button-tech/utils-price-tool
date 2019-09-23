@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var currencies = []string{"USD", "EUR", "RUB"}
@@ -124,7 +125,7 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
-		maps.PriceMap[storage.CryptoCurrency(v.Contract)] = &details
+		maps.PriceMap[storage.CryptoCurrency(strings.ToUpper(v.Contract))] = &details
 	}
 	maps.FiatMap[storage.Fiat(gotPrices.Currency)] = maps.PriceMap
 

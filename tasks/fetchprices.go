@@ -61,10 +61,6 @@ func NewGetGroupTask(cont *DuiCont) {
 
 			// go to trust-wallet
 			tokens := services.InitRequestData()
-
-			//ch := make(chan *storetrustwallet.GotPrices, 10)
-			//stored := make([]*storetrustwallet.GotPrices, 0)
-
 			for _, t := range tokens.Tokens {
 
 				wg.Add(1)
@@ -82,10 +78,8 @@ func NewGetGroupTask(cont *DuiCont) {
 
 			log.Printf("Count goroutines: %v", runtime.NumGoroutine())
 			wg.Wait()
-			//cont.Store.Update(stored)
 		}
 	}()
 
 	cont.Store.Get()
-	//cont.StoreCRC.Get()
 }
