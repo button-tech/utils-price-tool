@@ -14,21 +14,18 @@ func NewController(store storage.Cached) *controller {
 	return &controller{store: store}
 }
 
-// data what to get
-type dataTokensAndCurrencies struct {
+type request struct {
 	Tokens     []string `json:"tokens"`
 	Currencies []string `json:"currencies"`
 	Change     string   `json:"change"`
 	API        string   `json:"api"`
 }
 
-// make Response for get prices
-type prices struct {
+type response struct {
 	Currency string              `json:"currency"`
 	Rates    []map[string]string `json:"rates"`
 }
 
-// make Response list API
 type listApi struct {
 	API []api `json:"api"`
 	//Time             struct {
@@ -43,7 +40,7 @@ type api struct {
 }
 
 func (cr *controller) getCourses(c *gin.Context) {
-	req := dataTokensAndCurrencies{}
+	req := request{}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"err": err})
 		return
@@ -109,17 +106,17 @@ func (cr *controller) apiInfo(c *gin.Context) {
 func (cr *controller) Mount(r *gin.Engine) {
 	v1 := r.Group("/courses/v1/")
 	{
-		v1.POST("/prices", cr.getCourses)
+		v1.POST("/response", cr.getCourses)
 		v1.GET("/list", cr.apiInfo)
 	}
 }
 
-func(cr *controller) mapping(req *dataTokensAndCurrencies, api, ch string) []*prices {
-	result := make([]*prices, 0)
+func(cr *controller) mapping(req *request, api, ch string) []*response {
+	result := make([]*response, 0)
 	stored := cr.store.Get()[storage.Api(api)]
 
 	for _, c := range req.Currencies {
-		price := prices{}
+		price := response{}
 
 		if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
 			price.Currency = c
@@ -149,7 +146,7 @@ func changesControl(m map[string]string, s *storage.Details , c string) map[stri
 	}
 }
 
-func (cr *controller) converter(req *dataTokensAndCurrencies, api string) ([]*prices, error) {
+func (cr *controller) converter(req *request, api string) ([]*response, error) {
 	switch api {
 	case "cmc":
 		switch req.Change {
