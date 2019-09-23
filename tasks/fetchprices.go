@@ -14,7 +14,7 @@ import (
 type DuiCont struct {
 	TimeOut   time.Duration
 	Service   services.Service
-	Store     storage.Storage
+	Store     storage.Cached
 	StoreList storetoplist.Storage
 	StoreCRC  storecrc.Storage
 }

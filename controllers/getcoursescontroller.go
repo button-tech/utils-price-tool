@@ -13,12 +13,12 @@ import (
 )
 
 type controller struct {
-	store    storage.Storage
+	store    storage.Cached
 	storeCRC storecrc.Storage
 	list     storetoplist.Storage
 }
 
-func NewController(store storage.Storage) *controller {
+func NewController(store storage.Cached) *controller {
 	return &controller{store: store}
 }
 

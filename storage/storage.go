@@ -23,12 +23,12 @@ type Cache struct {
 	items Stored
 }
 
-type Storage interface {
+type Cached interface {
 	Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details)
 	Get() Stored
 }
 
-func NewCache() Storage {
+func NewCache() Cached {
 	items := make(Stored)
 
 	cache := Cache{
@@ -42,7 +42,11 @@ func NewCache() Storage {
 func (c *Cache) Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details) {
 	c.Lock()
 
-
+	for k, v := range cr {
+		for key, value := range c.items[a] {
+			key[k] = v
+		}
+	}
 
 
 	for k, v := range cr {
