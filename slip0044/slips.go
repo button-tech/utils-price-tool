@@ -9,27 +9,29 @@ import (
 )
 
 type TrustWalletSlips struct {
+	TWSlipsWithCrypto map[string]string
 	Contract   string
 	CoinSymbol string
 }
 
-func AddTrustHexBySlip() ([]*TrustWalletSlips, error) {
+func AddTrustHexBySlip() (map[string]string, error) {
 	slip := bip44.Create()
 	constants := slip.Get()
+	fmt.Println(constants[0])
 
-	trustWalletSlips := make([]*TrustWalletSlips, 0)
-	for i := 0; i < len(constants); i++ {
+	trustWalletSlips := make(map[string]string, 0)
+
+	// Because cycle started by index 1, we can't add BTC by makeHexString()
+	trustWalletSlips["BTC"] = "0x0000000000000000000000000000000000000000"
+
+	for i := 1; i < len(constants); i++ {
 		slipHexed, err := makeHexString(constants[i].Constant)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
 
-		trustWalletSlip := TrustWalletSlips{
-			Contract:   slipHexed,
-			CoinSymbol: constants[i].CoinSymbol,
-		}
-		trustWalletSlips = append(trustWalletSlips, &trustWalletSlip)
+		trustWalletSlips[constants[i].CoinSymbol] = slipHexed
 	}
 
 	return trustWalletSlips, nil
@@ -46,22 +48,15 @@ func makeHexString(s string) (string, error) {
 
 	ss := make([]string, 0)
 
-	// Because cycle started by index 1
-	ss = append(ss, "0x0000000000000000000000000000000000000000")
-
+	// Start from 1, because 1 item is 8. It should be skipped
 	for i := 1; i < len(splitter); i++ {
-		toInt, err := strconv.Atoi(splitter[i])
-		if err != nil {
-			return "", fmt.Errorf("can not parseString: %v", err)
-		}
-
-		if toInt != 0 {
+		if splitter[i] != "0" {
 			ss = append(splitter[i:])
 			break
 		}
 	}
 
-	var address = "0x0000000000000000000000000000000000000000"
+	address := "0x0000000000000000000000000000000000000000"
 
 	joined := strings.Join(ss, "")
 
