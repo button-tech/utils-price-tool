@@ -89,6 +89,19 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 	return topListMap, nil
 }
 
+type maps struct {
+	FiatMap map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details
+	PriceMap map[storage.CryptoCurrency]*storage.Details
+}
+
+// Make maps for storage
+func storeConstructor() maps {
+	return maps{
+		FiatMap:  make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details),
+		PriceMap: make(map[storage.CryptoCurrency]*storage.Details),
+	}
+}
+
 // Get prices from trust-wallet
 func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error) {
 
@@ -104,20 +117,18 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
 
-	details := storage.Details{}
-	fiatMap := make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details)
-	priceMap := make(map[storage.CryptoCurrency]*storage.Details)
-
+	maps := storeConstructor()
 	for _, v := range gotPrices.Docs {
+		details := storage.Details{}
+
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
-		priceMap[storage.CryptoCurrency(v.Contract)] = &details
+		maps.PriceMap[storage.CryptoCurrency(v.Contract)] = &details
 	}
+	maps.FiatMap[storage.Fiat(gotPrices.Currency)] = maps.PriceMap
 
-	fiatMap[storage.Fiat(gotPrices.Currency)] = priceMap
-
-	return fiatMap, nil
+	return maps.FiatMap, nil
 }
 
 // Get prices from crypt-compare
@@ -141,10 +152,7 @@ func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*st
 		return nil, fmt.Errorf("can not do fastJson: %v", err)
 	}
 
-
-	fiatMap := make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details)
-	priceMap := make(map[storage.CryptoCurrency]*storage.Details)
-
+	maps := storeConstructor()
 	for k, v := range m {
 		for _, i := range v {
 			details := storage.Details{}
@@ -153,15 +161,12 @@ func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*st
 			details.ChangePCT24Hour = strconv.FormatFloat(i.CHANGEPCT24HOUR, 'f', 2, 64)
 			details.ChangePCTHour = strconv.FormatFloat(i.CHANGEPCTHOUR, 'f', 2, 64)
 
-			if _, ok := priceMap[storage.CryptoCurrency(i.TOSYMBOL)]; !ok {
-				priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &storage.Details{}
-			}
-			priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
+			maps.PriceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
 		}
-		fiatMap[storage.Fiat(k)] = priceMap
+		maps.FiatMap[storage.Fiat(k)] = maps.PriceMap
 	}
 
-	return fiatMap, nil
+	return maps.FiatMap, nil
 }
 
 func crcFastJson(byteRq []byte) (map[string][]*Currency, error) {

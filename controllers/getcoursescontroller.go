@@ -3,18 +3,13 @@ package controllers
 import (
 	"errors"
 	"github.com/button-tech/utils-price-tool/storage"
-	"github.com/button-tech/utils-price-tool/storage/storecrc"
-	"github.com/button-tech/utils-price-tool/storage/storetoplist"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
 type controller struct {
 	store    storage.Cached
-	storeCRC storecrc.Storage
-	list     storetoplist.Storage
 }
 
 func NewController(store storage.Cached) *controller {
@@ -77,7 +72,6 @@ func (cr *controller) getCourses(c *gin.Context) {
 			return
 		}
 		c.JSON(200, gin.H{"data": &result})
-		return
 
 	case "crc":
 		result, err := cr.converterCRC(&req)
@@ -87,7 +81,6 @@ func (cr *controller) getCourses(c *gin.Context) {
 		}
 
 		c.JSON(200, gin.H{"data": &result})
-		return
 
 	default:
 		supportedCRC := []string{"0", "1", "24"}
@@ -183,48 +176,6 @@ func (cr *controller) converterCMC(req *dataTokensAndCurrencies) ([]prices, erro
 	default:
 		return nil, errors.New("no matches API changes")
 	}
-}
-
-func mapping(req *dataTokensAndCurrencies, stored map[string][]*storecrc.Currency, flag string) []*prices {
-
-	result := make([]*prices, 0)
-
-
-	for _, c := range req.Currencies {
-		prices := prices{}
-
-		for t, pr := range stored {
-			for _, sC := range pr {
-				if sC.TOSYMBOL == c {
-					prices.Currency = c
-
-					for _, reqCrypto := range req.Tokens {
-						if _, ok := stored[reqCrypto]; ok {
-							strPrice := strconv.FormatFloat(sC.PRICE, 'f', 2, 64)
-							rate := map[string]string{t: strPrice}
-							prices.Rates = append(prices.Rates, rate)
-						}
-					}
-
-
-
-
-
-					//for _, reqCrypto := range req.Tokens {
-					//
-					//	if reqCrypto == t {
-					//		strPrice := strconv.FormatFloat(sC.PRICE, 'f', 2, 64)
-					//		rate := map[string]string{t: strPrice}
-					//		prices.Rates = append(prices.Rates, rate)
-					//	}
-					//}
-				}
-			}
-		}
-		result = append(result, &prices)
-	}
-
-	return result
 }
 
 func (cr *controller) converterCRC(req *dataTokensAndCurrencies) ([]*prices, error) {

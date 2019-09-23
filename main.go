@@ -27,11 +27,7 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
 
-	//store := storetrustwallet.NewInMemoryCMCStore()
-
 	store := storage.NewCache()
-	//storeCRC := storecrc.NewInMemoryCRCStore()
-	//storeList := storetoplist.NewInMemoryListStore()
 	serviceGetPrices := services.NewService()
 
 	// Container for tasks
@@ -39,8 +35,6 @@ func main() {
 		TimeOut:   time.Second * 3,
 		Service:   serviceGetPrices,
 		Store:     store,
-		//StoreCRC:  storeCRC,
-		//StoreList: storeList,
 	}
 
 	go tasks.NewGetGroupTask(&toTask)

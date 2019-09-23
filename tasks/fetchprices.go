@@ -3,8 +3,6 @@ package tasks
 import (
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/button-tech/utils-price-tool/storage"
-	"github.com/button-tech/utils-price-tool/storage/storecrc"
-	"github.com/button-tech/utils-price-tool/storage/storetoplist"
 	"log"
 	"runtime"
 	"sync"
@@ -15,8 +13,6 @@ type DuiCont struct {
 	TimeOut   time.Duration
 	Service   services.Service
 	Store     storage.Cached
-	StoreList storetoplist.Storage
-	StoreCRC  storecrc.Storage
 }
 
 type TickerMeta struct {
