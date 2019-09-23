@@ -36,9 +36,16 @@ type prices struct {
 	Rates    []map[string]string `json:"rates"`
 }
 
+
 // Mapping stored prices with request tokens
 // Args have params:
 // [0]=currency, [1]=flag - to play with changes
+
+
+type percentChanges struct {
+	Rates map[string]string `json:"rate"`
+	PercentChange string `json:"percent_change,omitempty"`
+}
 
 
 // make Response list API
