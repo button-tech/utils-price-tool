@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/button-tech/utils-price-tool/storage"
-	"github.com/button-tech/utils-price-tool/storage/storecrc"
-	"github.com/button-tech/utils-price-tool/storage/storetoplist"
-	"github.com/button-tech/utils-price-tool/storage/storetrustwallet"
 	"github.com/imroc/req"
 	"github.com/valyala/fastjson"
 	"log"
@@ -27,20 +24,6 @@ var convertedCurrencies = map[string]string{
 	"0x00000000000000000000000000000000000000C2": "EOS",
 	"0x00000000000000000000000000000000000002CA": "BNB",
 	"0x0000000000000000000000000000000000000090": "XRP",
-}
-
-type TokensWithCurrency struct {
-	Currency string  `json:"currency"`
-	Tokens   []Token `json:"tokens"`
-}
-
-type Token struct {
-	Contract string `json:"contract"`
-}
-
-// Data to get prices to trust-wallet
-type TokensWithCurrencies struct {
-	Tokens []TokensWithCurrency
 }
 
 type Service interface {
@@ -87,7 +70,7 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	list := storetoplist.TopList{}
+	list := TopList{}
 	if err = rq.ToJSON(&list); err != nil {
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
@@ -116,7 +99,7 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	gotPrices := storetrustwallet.GotPrices{}
+	gotPrices := GotPrices{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
@@ -136,8 +119,6 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 
 	return fiatMap, nil
 }
-
-
 
 // Get prices from crypt-compare
 func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error) {
@@ -176,7 +157,6 @@ func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*st
 				priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &storage.Details{}
 			}
 			priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
-			//priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
 		}
 		fiatMap[storage.Fiat(k)] = priceMap
 	}
@@ -184,8 +164,8 @@ func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*st
 	return fiatMap, nil
 }
 
-func crcFastJson(byteRq []byte) (map[string][]*storecrc.Currency, error) {
-	m := make(map[string][]*storecrc.Currency)
+func crcFastJson(byteRq []byte) (map[string][]*Currency, error) {
+	m := make(map[string][]*Currency)
 
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
@@ -197,11 +177,11 @@ func crcFastJson(byteRq []byte) (map[string][]*storecrc.Currency, error) {
 	o.Visit(func(k []byte, v *fastjson.Value) {
 
 		fmt.Println(string(k))
-		currencies := make([]*storecrc.Currency, 0)
+		currencies := make([]*Currency, 0)
 
 		fiats := v.GetObject()
 		fiats.Visit(func(key []byte, value *fastjson.Value) {
-			currency := storecrc.Currency{}
+			currency := Currency{}
 
 			if err := json.Unmarshal([]byte(value.String()), &currency); err != nil {
 				log.Printf("can not unmarshal elem: %v", value.String())
