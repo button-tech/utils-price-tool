@@ -11,6 +11,7 @@ import (
 	"github.com/valyala/fastjson"
 	"log"
 	"os"
+	"strconv"
 )
 
 var currencies = []string{"USD", "EUR", "RUB"}
@@ -44,7 +45,7 @@ type TokensWithCurrencies struct {
 
 type Service interface {
 	GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error)
-	GetCRCPrices(c []string) (map[string][]*storecrc.Currency, error)
+	GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error)
 	GetTopList(c map[string]string) (map[string]string, error)
 }
 
@@ -133,25 +134,22 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 
 	fiatMap[storage.Fiat(gotPrices.Currency)] = priceMap
 
-	//result := make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details)
-	//result[storage.Api("cmc")] = fiatMap
-
 	return fiatMap, nil
 }
 
 
 
 // Get prices from crypt-compare
-func(s *service) GetCRCPrices(c []string) (map[string][]*storecrc.Currency, error) {
+func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error) {
 
-	url := "https://min-api.cryptocompare.com/data/pricemultifull?tsyms=USD,EUR,RUB"
+	url := "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=USD,EUR,RUB"
 
 	var forParams string
-	for _, k := range c {
+	for _, k := range convertedCurrencies {
 		forParams += k + ","
 	}
 
-	rq, err := req.Get(url, req.Param{"fsyms": forParams})
+	rq, err := req.Get(url, req.Param{"tsyms": forParams})
 	if err != nil {
 		return nil, fmt.Errorf("can not make req: %v", err)
 	}
@@ -162,7 +160,26 @@ func(s *service) GetCRCPrices(c []string) (map[string][]*storecrc.Currency, erro
 		return nil, fmt.Errorf("can not do fastJson: %v", err)
 	}
 
-	return m, nil
+	details := storage.Details{}
+	fiatMap := make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details)
+	priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+
+	for k, v := range m {
+		for _, i := range v {
+			details.Price = strconv.FormatFloat(1/i.PRICE, 'f', 2, 64)
+			details.ChangePCT24Hour = strconv.FormatFloat(i.CHANGEPCT24HOUR, 'f', 2, 64)
+			details.ChangePCTHour = strconv.FormatFloat(i.CHANGEPCTHOUR, 'f', 2, 64)
+
+			if _, ok := priceMap[storage.CryptoCurrency(i.TOSYMBOL)]; !ok {
+				priceMap = map[storage.CryptoCurrency]*storage.Details{}
+			}
+			priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
+			//priceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
+		}
+		fiatMap[storage.Fiat(k)] = priceMap
+	}
+
+	return fiatMap, nil
 }
 
 func crcFastJson(byteRq []byte) (map[string][]*storecrc.Currency, error) {
@@ -177,6 +194,7 @@ func crcFastJson(byteRq []byte) (map[string][]*storecrc.Currency, error) {
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
 
+		fmt.Println(string(k))
 		currencies := make([]*storecrc.Currency, 0)
 
 		fiats := v.GetObject()
@@ -187,16 +205,15 @@ func crcFastJson(byteRq []byte) (map[string][]*storecrc.Currency, error) {
 				log.Printf("can not unmarshal elem: %v", value.String())
 			}
 
-			currencies = append(currencies, &currency)
-
 			for t, c := range convertedCurrencies {
-				if c == string(k) {
-					m[t] = currencies
+				if c == currency.TOSYMBOL {
+					currency.TOSYMBOL = t
 				}
 			}
+			currencies = append(currencies, &currency)
 
+			m[string(k)] = currencies
 		})
-
 	})
 
 	return m, nil

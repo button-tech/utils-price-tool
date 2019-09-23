@@ -44,14 +44,10 @@ func (c *Cache) Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details) {
 
 	if _, ok := c.items[a]; !ok {
 		c.items[a] = map[Fiat]map[CryptoCurrency]*Details{}
+	}
 
-		for k, v := range cr {
-			c.items[a][k] = v
-		}
-	} else {
-		for k, v := range cr {
-			c.items[a][k] = v
-		}
+	for k, v := range cr {
+		c.items[a][k] = v
 	}
 
 	c.Unlock()

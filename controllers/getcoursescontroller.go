@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"errors"
-	"fmt"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/storage/storecrc"
 	"github.com/button-tech/utils-price-tool/storage/storetoplist"
@@ -161,73 +160,25 @@ func (cr *controller) converterCMC(req *dataTokensAndCurrencies) ([]prices, erro
 			}
 			result = append(result, price)
 		}
-
-		fmt.Println(result)
 		return result, nil
 
-		//	for _, t := range req.Tokens {
-		//		if val, ok := stored[storage.CryptoCurrency(t)]; ok {
-		//			if fiatVal, FiatOk := val[storage.Fiat(c)]; FiatOk {
-		//				price.Currency = c
-		//
-		//			}
-		//		}
-		//	}
-		//}
+		case "0", "":
+		for _, c := range req.Currencies {
+			price := prices{}
 
+			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
+				price.Currency = c
 
-
-		//contract := map[string]string{t: st.Price}
-		//contract["percent_change"] = st.PercentChange24H
-		//price.Rates = append(price.Rates, contract)
-		//
-		//for _, rq := range req.Currencies {
-		//	price := prices{}
-		//
-		//	for _, st := range stored {
-		//		if rq == st.Currency {
-		//			price.Currency = rq
-		//
-		//			for _, t := range req.Tokens {
-		//				for _, st := range st.Docs {
-		//
-		//					if strings.ToLower(t) == st.Contract {
-		//						contract := map[string]string{t: st.Price}
-		//						contract["percent_change"] = st.PercentChange24H
-		//						price.Rates = append(price.Rates, contract)
-		//					}
-		//				}
-		//			}
-		//		}
-		//	}
-		//	result = append(result, price)
-		//}
-	//
-	//	return result, nil
-	//
-	//case "0", "":
-	//	for _, rq := range req.Currencies {
-	//		price := prices{}
-	//
-	//		for _, st := range stored {
-	//			if rq == st.Currency {
-	//				price.Currency = rq
-	//
-	//				for _, t := range req.Tokens {
-	//					for _, st := range st.Docs {
-	//
-	//						if strings.ToLower(t) == st.Contract {
-	//							contract := map[string]string{t: st.Price}
-	//							price.Rates = append(price.Rates, contract)
-	//						}
-	//					}
-	//				}
-	//			}
-	//		}
-	//		result = append(result, price)
-	//	}
-	//
-	//	return result, nil
+				for _, t := range req.Tokens {
+					if val, ok := fiatVal[storage.CryptoCurrency(strings.ToLower(t))]; ok {
+						contract := map[string]string{t: val.Price}
+						price.Rates = append(price.Rates, contract)
+					}
+				}
+			}
+			result = append(result, price)
+		}
+		return result, nil
 
 	default:
 		return nil, errors.New("no matches API changes")
@@ -277,119 +228,70 @@ func mapping(req *dataTokensAndCurrencies, stored map[string][]*storecrc.Currenc
 }
 
 func (cr *controller) converterCRC(req *dataTokensAndCurrencies) ([]*prices, error) {
-	//result := make([]*prices, 0)
+	result := make([]*prices, 0)
 
 	switch req.Change {
 	case "0", "":
-		stored := cr.storeCRC.Get()
+		stored := cr.store.Get()["crc"]
 
-		return mapping(req, stored, ""), nil
+		for _, c := range req.Currencies {
+			price := prices{}
 
-	//case "1":
-	//	stored := cr.storeCRC.Get()
-	//
-	//	for _, curr := range req.Currencies {
-	//		price := prices{}
-	//
-	//		price.mapping(req, stored, )
-	//	}
-	//
-	//	return result, nil
-	//
-	//
-	//
-	//
-	//			case pr.USD.TOSYMBOL:
-	//				price.Currency = curr
-	//				for _, rqCrypto := range req.Tokens {
-	//
-	//					if rqCrypto == t {
-	//						strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
-	//						rate := map[string]string{t: strPrice}
-	//						rate["percent_change"] = strconv.FormatFloat(pr.USD.CHANGEPCTHOUR, 'f', 2, 64)
-	//						price.Rates = append(price.Rates, rate)
-	//					}
-	//				}
-	//
-	//			case pr.EUR.TOSYMBOL:
-	//				price.Currency = curr
-	//				for _, rqCrypto := range req.Tokens {
-	//
-	//					if rqCrypto == t {
-	//						strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
-	//						rate := map[string]string{t: strPrice}
-	//						rate["percent_change"] = strconv.FormatFloat(pr.EUR.CHANGEPCTHOUR, 'f', 2, 64)
-	//						price.Rates = append(price.Rates, rate)
-	//					}
-	//				}
-	//
-	//			case pr.RUB.TOSYMBOL:
-	//				price.Currency = curr
-	//				for _, rqCrypto := range req.Tokens {
-	//
-	//					if rqCrypto == t {
-	//						strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
-	//						rate := map[string]string{t: strPrice}
-	//						rate["percent_change"] = strconv.FormatFloat(pr.RUB.CHANGEPCTHOUR, 'f', 2, 64)
-	//						price.Rates = append(price.Rates, rate)
-	//					}
-	//				}
-	//			}
-	//		}
-	//		result = append(result, price)
-	//	}
-	//
-	//	return result, nil
-	//
-	//case "24":
-	//	stored := cr.storeCRC.Get()
-	//
-	//	for _, curr := range req.Currencies {
-	//		price := prices{}
-	//
-	//		for t, pr := range stored {
-	//			switch curr {
-	//			case pr.USD.TOSYMBOL:
-	//				price.Currency = curr
-	//				for _, rqCrypto := range req.Tokens {
-	//
-	//					if rqCrypto == t {
-	//						strPrice := strconv.FormatFloat(pr.USD.PRICE, 'f', 2, 64)
-	//						rate := map[string]string{t: strPrice}
-	//						rate["percent_change"] = strconv.FormatFloat(pr.USD.CHANGEPCT24HOUR, 'f', 2, 64)
-	//						price.Rates = append(price.Rates, rate)
-	//					}
-	//				}
-	//
-	//			case pr.EUR.TOSYMBOL:
-	//				price.Currency = curr
-	//				for _, rqCrypto := range req.Tokens {
-	//
-	//					if rqCrypto == t {
-	//						strPrice := strconv.FormatFloat(pr.EUR.PRICE, 'f', 2, 64)
-	//						rate := map[string]string{t: strPrice}
-	//						rate["percent_change"] = strconv.FormatFloat(pr.EUR.CHANGEPCT24HOUR, 'f', 2, 64)
-	//						price.Rates = append(price.Rates, rate)
-	//					}
-	//				}
-	//
-	//			case pr.RUB.TOSYMBOL:
-	//				price.Currency = curr
-	//				for _, rqCrypto := range req.Tokens {
-	//
-	//					if rqCrypto == t {
-	//						strPrice := strconv.FormatFloat(pr.RUB.PRICE, 'f', 2, 64)
-	//						rate := map[string]string{t: strPrice}
-	//						rate["percent_change"] = strconv.FormatFloat(pr.RUB.CHANGEPCT24HOUR, 'f', 2, 64)
-	//						price.Rates = append(price.Rates, rate)
-	//					}
-	//				}
-	//			}
-	//		}
-	//		result = append(result, price)
-	//	}
-	//
-	//	return result, nil
+			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
+				price.Currency = c
+
+				for _, t := range req.Tokens {
+					if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
+						contract := map[string]string{t: val.Price}
+						price.Rates = append(price.Rates, contract)
+					}
+				}
+			}
+			result = append(result, &price)
+		}
+		return result, nil
+
+	case "1":
+		stored := cr.store.Get()["crc"]
+
+		for _, c := range req.Currencies {
+			price := prices{}
+
+			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
+				price.Currency = c
+
+				for _, t := range req.Tokens {
+					if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
+						contract := map[string]string{t: val.Price}
+						contract["percent_change"] = val.ChangePCTHour
+						price.Rates = append(price.Rates, contract)
+					}
+				}
+			}
+			result = append(result, &price)
+		}
+		return result, nil
+
+	case "24":
+		stored := cr.store.Get()["crc"]
+
+		for _, c := range req.Currencies {
+			price := prices{}
+
+			if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
+				price.Currency = c
+
+				for _, t := range req.Tokens {
+					if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
+						contract := map[string]string{t: val.Price}
+						contract["percent_change"] = val.ChangePCT24Hour
+						price.Rates = append(price.Rates, contract)
+					}
+				}
+			}
+			result = append(result, &price)
+		}
+		return result, nil
 
 	default:
 		return nil, errors.New("no matches API")
