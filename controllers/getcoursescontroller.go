@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/gin-gonic/gin"
+	"strings"
 )
 
 type controller struct {
@@ -46,9 +47,9 @@ func (cr *controller) getCourses(c *gin.Context) {
 		return
 	}
 
-	switch req.API {
+	a := req.API; switch a {
 	case "cmc":
-		result, err := cr.converter(&req, "cmc")
+		result, err := cr.converter(&req, a)
 		if err != nil {
 			c.JSON(400, gin.H{"error": "no matches API changes"})
 			return
@@ -56,7 +57,7 @@ func (cr *controller) getCourses(c *gin.Context) {
 		c.JSON(200, gin.H{"data": result})
 
 	case "crc":
-		result, err := cr.converter(&req, "crc")
+		result, err := cr.converter(&req, a)
 		if err != nil {
 			c.JSON(400, gin.H{"error": "no matches API changes"})
 			return
@@ -122,9 +123,13 @@ func(cr *controller) mapping(req *request, api, ch string) []*response {
 			price.Currency = c
 
 			for _, t := range req.Tokens {
-				if val, ok := fiatVal[storage.CryptoCurrency(t)]; ok {
+				if val, ok := fiatVal[storage.CryptoCurrency(strings.ToLower(t))]; ok {
 					contract := map[string]string{t: val.Price}
-					price.Rates = append(price.Rates, changesControl(contract, val, ch))
+					if contract = changesControl(contract, val, ch); contract == nil {
+						return nil
+					} else {
+						price.Rates = append(price.Rates, contract)
+					}
 				}
 			}
 		}
@@ -136,41 +141,61 @@ func(cr *controller) mapping(req *request, api, ch string) []*response {
 func changesControl(m map[string]string, s *storage.Details , c string) map[string]string {
 	switch c {
 	case "1":
-		m["percent_change"] = s.ChangePCTHour
-		return m
+		if s.ChangePCTHour != "" {
+			m["percent_change"] = s.ChangePCTHour
+			return m
+		}
+		return nil
 	case "24":
-		m["percent_change"] = s.ChangePCT24Hour
-		return m
+		if s.ChangePCT24Hour != "" {
+			m["percent_change"] = s.ChangePCT24Hour
+			return m
+		}
+		return nil
 	default:
 		return m
 	}
 }
 
 func (cr *controller) converter(req *request, api string) ([]*response, error) {
-	switch api {
+	a := api; switch a {
 	case "cmc":
-		switch req.Change {
-		case "24":
-			return cr.mapping(req, "cmc", "24"), nil
-		case "0", "":
-			return cr.mapping(req, "cmc", "0"), nil
-		default:
-			return nil, errors.New("no matches API changes")
+		resp, err := cr.switcher(req, a)
+		if err != nil {
+			return nil, errors.New("no matches API")
 		}
+		return resp, nil
 
 	case "crc":
-		switch req.Change {
-		case "24":
-			return cr.mapping(req, "crc", "24"), nil
-		case "1":
-			return cr.mapping(req, "crc", "1"), nil
-		case "0", "":
-			return cr.mapping(req, "crc", "0"), nil
-		default:
-			return nil, errors.New("no matches API changes")
+		resp, err := cr.switcher(req, a)
+		if err != nil {
+			return nil, errors.New("no matches API")
 		}
+		return resp, nil
 
 	default:
 		return nil, errors.New("no matches API")
+	}
+}
+
+func(cr *controller) switcher(req *request, api string) ([]*response, error) {
+	sw := req.Change; switch sw {
+	case "24":
+		if mapped := cr.mapping(req, api, sw); mapped == nil {
+			return nil, errors.New("no matches API changes")
+		}
+		return cr.mapping(req, api, sw), nil
+	case "1":
+		if mapped := cr.mapping(req, api, sw); mapped == nil {
+			return nil, errors.New("no matches API changes")
+		}
+		return cr.mapping(req, api, sw), nil
+	case "0", "":
+		if mapped := cr.mapping(req, api, sw); mapped == nil {
+			return nil, errors.New("no matches API changes")
+		}
+		return cr.mapping(req, api, sw), nil
+	default:
+		return nil, errors.New("no matches API changes")
 	}
 }

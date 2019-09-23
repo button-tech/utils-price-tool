@@ -125,7 +125,7 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
-		maps.PriceMap[storage.CryptoCurrency(strings.ToUpper(v.Contract))] = &details
+		maps.PriceMap[storage.CryptoCurrency(strings.ToLower(v.Contract))] = &details
 	}
 	maps.FiatMap[storage.Fiat(gotPrices.Currency)] = maps.PriceMap
 
@@ -162,7 +162,7 @@ func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*st
 			details.ChangePCT24Hour = strconv.FormatFloat(i.CHANGEPCT24HOUR, 'f', 2, 64)
 			details.ChangePCTHour = strconv.FormatFloat(i.CHANGEPCTHOUR, 'f', 2, 64)
 
-			maps.PriceMap[storage.CryptoCurrency(i.TOSYMBOL)] = &details
+			maps.PriceMap[storage.CryptoCurrency(strings.ToLower(i.TOSYMBOL))] = &details
 		}
 		maps.FiatMap[storage.Fiat(k)] = maps.PriceMap
 	}
