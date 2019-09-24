@@ -47,23 +47,13 @@ func (cr *controller) getCourses(c *gin.Context) {
 		return
 	}
 
-	a := req.API
-	switch a {
-	case "cmc":
+	a := req.API; switch a {
+	case "cmc", "crc":
 		result, err := cr.converter(&req, a)
 		if err != nil {
 			c.JSON(400, gin.H{"error": "no matches API changes"})
 			return
 		}
-		c.JSON(200, gin.H{"data": result})
-
-	case "crc":
-		result, err := cr.converter(&req, a)
-		if err != nil {
-			c.JSON(400, gin.H{"error": "no matches API changes"})
-			return
-		}
-
 		c.JSON(200, gin.H{"data": result})
 
 	default:

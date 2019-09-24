@@ -24,7 +24,7 @@ type Cache struct {
 }
 
 type Cached interface {
-	Set(a Api, cr FiatMap)
+	Set(a Api, f FiatMap)
 	Get() Stored
 }
 
@@ -34,19 +34,17 @@ func NewCache() Cached {
 	cache := Cache{
 		items: items,
 	}
-
 	return &cache
 }
 
-//todo: complete
-func (c *Cache) Set(a Api, cr FiatMap) {
+func (c *Cache) Set(a Api, f FiatMap) {
 	c.Lock()
 
 	if _, ok := c.items[a]; !ok {
 		c.items[a] = map[Fiat]map[CryptoCurrency]*Details{}
 	}
 
-	for k, v := range cr {
+	for k, v := range f {
 		c.items[a][k] = v
 	}
 
