@@ -12,6 +12,174 @@ import (
 	"strings"
 )
 
+//"AED",
+//"AFN",
+//"ALL",
+//"AMD",
+//"ANG",
+//"AOA",
+//"ARS",
+//"AUD",
+//"AWG",
+//"AZN",
+//"BAM",
+//"BBD",
+//"BDT",
+//"BGN",
+//"BHD",
+//"BIF",
+//"BMD",
+//"BND",
+//"BOB",
+//"BRL",
+//"BSD",
+//"BTC",
+//"BTN",
+//"BWP",
+//"BYN",
+//"BYR",
+//"BZD",
+//"CAD",
+//"CDF",
+//"CHF",
+//"CLF",
+//"CLP",
+//"CNY",
+//"COP",
+//"CRC",
+//"CUC",
+//"CUP",
+//"CVE",
+//"CZK",
+//"DJF",
+//"DKK",
+//"DOP",
+//"DZD",
+//"EGP",
+//"ERN",
+//"ETB",
+//"EUR",
+//"FJD",
+//"FKP",
+//"GBP",
+//"GEL",
+//"GGP",
+//"GHS",
+//"GIP",
+//"GMD",
+//"GNF",
+//"GTQ",
+//"GYD",
+//"HKD",
+//"HNL",
+//"HRK",
+//"HTG",
+//"HUF",
+//"IDR",
+//"ILS",
+//"IMP",
+//"INR",
+//"IQD",
+//"IRR",
+//"ISK",
+//"JEP",
+//"JMD",
+//"JOD",
+//"JPY",
+//"KES",
+//"KGS",
+//"KHR",
+//"KMF",
+//"KPW",
+//"KRW",
+//"KWD",
+//"KYD",
+//"KZT",
+//"LAK",
+//"LBP",
+//"LKR",
+//"LRD",
+//"LSL",
+//"LTL",
+//"LVL",
+//"LYD",
+//"MAD",
+//"MDL",
+//"MGA",
+//"MKD",
+//"MMK",
+//"MNT",
+//"MOP",
+//"MRO",
+//"MUR",
+//"MVR",
+//"MWK",
+//"MXN",
+//"MYR",
+//"MZN",
+//"NAD",
+//"NGN",
+//"NIO",
+//"NOK",
+//"NPR",
+//"NZD",
+//"OMR",
+//"PAB",
+//"PEN",
+//"PGK",
+//"PHP",
+//"PKR",
+//"PLN",
+//"PYG",
+//"QAR",
+//"RON",
+//"RUB",
+//"RWF",
+//"SAR",
+//"SBD",
+//"SCR",
+//"SDG",
+//"SEK",
+//"SGD",
+//"SHP",
+//"SLL",
+//"SOS",
+//"SRD",
+//"STD",
+//"SVC",
+//"SYP",
+//"SZL",
+//"THB",
+//"TJS",
+//"TMT",
+//"TND",
+//"TOP",
+//"TRY",
+//"TTD",
+//"TWD",
+//"TZS",
+//"UAH",
+//"UGX",
+//"USD",
+//"UYU",
+//"UZS",
+//"VEF",
+//"VND",
+//"VUV",
+//"WST",
+//"XAF",
+//"XAG",
+//"XAU",
+//"XCD",
+//"XDR",
+//"XOF",
+//"XPF",
+//"YER",
+//"ZAR",
+//"ZMK",
+//"ZMW",
+//"ZWL"
+
 var currencies = []string{"USD", "EUR", "RUB"}
 
 var convertedCurrencies = map[string]string{
@@ -96,7 +264,7 @@ type maps struct {
 }
 
 // Make maps for storage
-func storeConstructor() maps {
+func storeMapsConstructor() maps {
 	return maps{
 		FiatMap:  make(storage.FiatMap),
 		PriceMap: make(map[storage.CryptoCurrency]*storage.Details),
@@ -118,7 +286,7 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
 
-	maps := storeConstructor()
+	maps := storeMapsConstructor()
 	for _, v := range gotPrices.Docs {
 		details := storage.Details{}
 
@@ -153,21 +321,23 @@ func(s *service) GetPricesCRC() (storage.FiatMap, error) {
 		return nil, fmt.Errorf("can not do fastJson: %v", err)
 	}
 
-	maps := storeConstructor()
+	fiatMap := make(storage.FiatMap)
 	for k, v := range m {
+		priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+
 		for _, i := range v {
 			details := storage.Details{}
-
 			details.Price = strconv.FormatFloat(1/i.PRICE, 'f', 2, 64)
 			details.ChangePCT24Hour = strconv.FormatFloat(i.CHANGEPCT24HOUR, 'f', 2, 64)
 			details.ChangePCTHour = strconv.FormatFloat(i.CHANGEPCTHOUR, 'f', 2, 64)
 
-			maps.PriceMap[storage.CryptoCurrency(strings.ToLower(i.TOSYMBOL))] = &details
+			priceMap[storage.CryptoCurrency(strings.ToLower(i.TOSYMBOL))] = &details
 		}
-		maps.FiatMap[storage.Fiat(k)] = maps.PriceMap
+
+		fiatMap[storage.Fiat(k)] = priceMap
 	}
 
-	return maps.FiatMap, nil
+	return fiatMap, nil
 }
 
 func crcFastJson(byteRq []byte) (map[string][]*Currency, error) {

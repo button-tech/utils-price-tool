@@ -15,13 +15,7 @@ import (
 
 //todo: rewrite at fast-http
 
-//todo: make one storage
-
-//todo: complete hexed functional
-
 //todo: add packages response, request, error
-
-//todo: from handlers make one func for mapping
 
 func main() {
 	r := gin.Default()
