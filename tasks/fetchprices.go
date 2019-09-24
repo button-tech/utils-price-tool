@@ -22,8 +22,34 @@ type TickerMeta struct {
 	End   time.Time
 }
 
+type Worker func(wg *sync.WaitGroup, cont *DuiCont)
+
+func Worker2(wg *sync.WaitGroup, cont *DuiCont) {
+	tokens := services.InitRequestData()
+	for _, t := range tokens.Tokens {
+
+		got, err := cont.Service.GetPricesCMC(t)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		cont.Store.Set("cmc", got)
+	}
+	wg.Done()
+}
+
+func Worker1(wg *sync.WaitGroup, cont *DuiCont) {
+	res, err := cont.Service.GetPricesCRC()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	cont.Store.Set("crc", res)
+	wg.Done()
+}
+
 //Pool of workers
-func NewGetGroupTask(cont *DuiCont) {
+func NewGetGroup(cont *DuiCont) {
 	ticker := time.Tick(cont.TimeOut)
 
 	converted, err := slip0044.AddTrustHexBySlip()
@@ -31,8 +57,13 @@ func NewGetGroupTask(cont *DuiCont) {
 		log.Println(err)
 		return
 	}
+
 	wg := sync.WaitGroup{}
 
+	workList := []Worker{
+		Worker1,
+		Worker2,
+	}
 
 	for ; true; <-ticker {
 		start := time.Now()
@@ -43,42 +74,13 @@ func NewGetGroupTask(cont *DuiCont) {
 		}
 		fmt.Println(len(topList))
 
-		//cryptoForCRC := make([]string, 0)
-		//for _, v := range topList {
-		//	cryptoForCRC = append(cryptoForCRC, v)
-		//}
-		wg.Add(2)
-
-		// go to compare
-		go func(wg *sync.WaitGroup) {
-			res, err := cont.Service.GetPricesCRC()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			cont.Store.Set("crc", res)
-			wg.Done()
-		}(&wg)
-
-
-		// go to trust-wallet
-		go func(wg *sync.WaitGroup) {
-			tokens := services.InitRequestData()
-			for _, t := range tokens.Tokens {
-
-				got, err := cont.Service.GetPricesCMC(t)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				cont.Store.Set("cmc", got)
-			}
-			wg.Done()
-		}(&wg)
-
+		for _, worker := range workList{
+			wg.Add(1)
+			go worker(&wg, cont)
+		}
+		log.Printf("Count goroutines: %v", runtime.NumGoroutine())
 		wg.Wait()
 
-		log.Printf("Count goroutines: %v", runtime.NumGoroutine())
 		end := time.Since(start)
 		log.Println("Time EXEC:", end)
 	}

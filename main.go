@@ -22,7 +22,7 @@ func main() {
 	r.Use(cors.Default())
 
 	store := storage.NewCache()
-	serviceGetPrices := services.NewService()
+	serviceGetPrices := services.New()
 
 	// Container for tasks
 	toTask := tasks.DuiCont{
@@ -31,8 +31,8 @@ func main() {
 		Store:     store,
 	}
 
-	go tasks.NewGetGroupTask(&toTask)
-	controllers.NewController(store).Mount(r)
+	go tasks.NewGetGroup(&toTask)
+	controllers.New(store).Mount(r)
 
 	if err := r.Run(":5000"); err != nil {
 		log.Fatal(err)

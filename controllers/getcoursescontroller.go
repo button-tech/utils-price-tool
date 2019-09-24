@@ -11,7 +11,7 @@ type controller struct {
 	store    storage.Cached
 }
 
-func NewController(store storage.Cached) *controller {
+func New(store storage.Cached) *controller {
 	return &controller{store: store}
 }
 
