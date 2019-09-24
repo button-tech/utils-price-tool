@@ -133,7 +133,9 @@ func(cr *controller) mapping(req *request, api, ch string) []*response {
 				}
 			}
 		}
-		result = append(result, &price)
+		if price.Currency != "" {
+			result = append(result, &price)
+		}
 	}
 	return result
 }
@@ -159,43 +161,17 @@ func changesControl(m map[string]string, s *storage.Details , c string) map[stri
 
 func (cr *controller) converter(req *request, api string) ([]*response, error) {
 	a := api; switch a {
-	case "cmc":
-		resp, err := cr.switcher(req, a)
-		if err != nil {
+	case "cmc", "crc":
+		resp := cr.switcher(req, a)
+		if resp == nil {
 			return nil, errors.New("no matches API")
 		}
 		return resp, nil
-
-	case "crc":
-		resp, err := cr.switcher(req, a)
-		if err != nil {
-			return nil, errors.New("no matches API")
-		}
-		return resp, nil
-
 	default:
 		return nil, errors.New("no matches API")
 	}
 }
 
-func(cr *controller) switcher(req *request, api string) ([]*response, error) {
-	sw := req.Change; switch sw {
-	case "24":
-		if mapped := cr.mapping(req, api, sw); mapped == nil {
-			return nil, errors.New("no matches API changes")
-		}
-		return cr.mapping(req, api, sw), nil
-	case "1":
-		if mapped := cr.mapping(req, api, sw); mapped == nil {
-			return nil, errors.New("no matches API changes")
-		}
-		return cr.mapping(req, api, sw), nil
-	case "0", "":
-		if mapped := cr.mapping(req, api, sw); mapped == nil {
-			return nil, errors.New("no matches API changes")
-		}
-		return cr.mapping(req, api, sw), nil
-	default:
-		return nil, errors.New("no matches API changes")
-	}
+func(cr *controller) switcher(req *request, api string) []*response {
+	return cr.mapping(req, api, req.Change)
 }

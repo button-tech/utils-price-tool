@@ -80,6 +80,4 @@ func NewGetGroupTask(cont *DuiCont) {
 			wg.Wait()
 		}
 	}()
-
-	cont.Store.Get()
 }
