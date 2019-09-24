@@ -1,7 +1,9 @@
 package tasks
 
 import (
+	"fmt"
 	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/slip0044"
 	"github.com/button-tech/utils-price-tool/storage"
 	"log"
 	"runtime"
@@ -24,22 +26,24 @@ type TickerMeta struct {
 func NewGetGroupTask(cont *DuiCont) {
 	ticker := time.Tick(cont.TimeOut)
 
-	//converted, err := slip0044.AddTrustHexBySlip()
-	//if err != nil {
-	//	log.Println(err)
-	//	return
-	//}
+	converted, err := slip0044.AddTrustHexBySlip()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	wg := sync.WaitGroup{}
 
 	go func() {
 		for ; true; <-ticker {
 
-			//topList, err := cont.Service.GetTopList(converted)
-			//if err != nil {
-			//	log.Println(err)
-			//}
-			//
+			topList, err := cont.Service.GetTopList(converted)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			fmt.Println(len(topList))
+
 			//cryptoForCRC := make([]string, 0)
 			//for _, v := range topList {
 			//	cryptoForCRC = append(cryptoForCRC, v)

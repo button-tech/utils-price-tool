@@ -17,7 +17,6 @@ type TrustWalletSlips struct {
 func AddTrustHexBySlip() (map[string]string, error) {
 	slip := bip44.Create()
 	constants := slip.Get()
-	fmt.Println(constants[0])
 
 	trustWalletSlips := make(map[string]string, 0)
 

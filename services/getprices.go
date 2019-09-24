@@ -28,8 +28,8 @@ var convertedCurrencies = map[string]string{
 }
 
 type Service interface {
-	GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error)
-	GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error)
+	GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error)
+	GetPricesCRC() (storage.FiatMap, error)
 	GetTopList(c map[string]string) (map[string]string, error)
 }
 
@@ -64,7 +64,7 @@ func InitRequestData() TokensWithCurrencies {
 // Get top list of crypto-currencies from coin-market
 func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 
-	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=10&convert=USD"
+	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
 
 	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")})
 	if err != nil {
@@ -80,7 +80,7 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 		return nil, fmt.Errorf("bad request: %v", list.Status.ErrorCode)
 	}
 
-	topListMap := make(map[string]string, 0)
+	topListMap := make(map[string]string)
 	for _, item := range list.Data {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[val] = item.Symbol
@@ -91,20 +91,20 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 }
 
 type maps struct {
-	FiatMap map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details
+	FiatMap storage.FiatMap
 	PriceMap map[storage.CryptoCurrency]*storage.Details
 }
 
 // Make maps for storage
 func storeConstructor() maps {
 	return maps{
-		FiatMap:  make(map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details),
+		FiatMap:  make(storage.FiatMap),
 		PriceMap: make(map[storage.CryptoCurrency]*storage.Details),
 	}
 }
 
 // Get prices from trust-wallet
-func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error) {
+func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
 
 	url := os.Getenv("TRUST_URL")
 
@@ -133,7 +133,7 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (map[storage.Fiat]map[
 }
 
 // Get prices from crypt-compare
-func(s *service) GetPricesCRC() (map[storage.Fiat]map[storage.CryptoCurrency]*storage.Details, error) {
+func(s *service) GetPricesCRC() (storage.FiatMap, error) {
 
 	url := "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=USD,EUR,RUB"
 

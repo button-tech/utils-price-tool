@@ -5,12 +5,12 @@ import (
 )
 
 type Api string
-
 type CryptoCurrency string
-
 type Fiat string
 
-type Stored map[Api]map[Fiat]map[CryptoCurrency]*Details
+type FiatMap map[Fiat]map[CryptoCurrency]*Details
+
+type Stored map[Api]FiatMap
 
 type Details struct {
 	Price           string
@@ -24,7 +24,7 @@ type Cache struct {
 }
 
 type Cached interface {
-	Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details)
+	Set(a Api, cr FiatMap)
 	Get() Stored
 }
 
@@ -39,7 +39,7 @@ func NewCache() Cached {
 }
 
 //todo: complete
-func (c *Cache) Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details) {
+func (c *Cache) Set(a Api, cr FiatMap) {
 	c.Lock()
 
 	if _, ok := c.items[a]; !ok {
@@ -53,8 +53,9 @@ func (c *Cache) Set(a Api, cr map[Fiat]map[CryptoCurrency]*Details) {
 	c.Unlock()
 }
 
-func (c *Cache) Get() Stored {
+func (c *Cache) Get() (s Stored) {
 	c.RLock()
-	defer c.RUnlock()
-	return c.items
+	s = c.items
+	c.RUnlock()
+	return
 }
