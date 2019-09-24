@@ -21,7 +21,7 @@ Request body:
         "USD",
         "RUB"
     ],
-    "change": "0", - you can skip, because value is 0
+    "change": "24", 
     "api": "cmc"
 }
 ```
