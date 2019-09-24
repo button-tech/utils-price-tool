@@ -261,7 +261,7 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 }
 
 type maps struct {
-	FiatMap storage.FiatMap
+	FiatMap  storage.FiatMap
 	PriceMap map[storage.CryptoCurrency]*storage.Details
 }
 
@@ -303,7 +303,7 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 }
 
 // Get prices from crypt-compare
-func(s *service) GetPricesCRC() (storage.FiatMap, error) {
+func (s *service) GetPricesCRC() (storage.FiatMap, error) {
 
 	var fiats string
 	for _, v := range currencies {

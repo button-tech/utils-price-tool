@@ -12,9 +12,9 @@ import (
 )
 
 type DuiCont struct {
-	TimeOut   time.Duration
-	Service   services.Service
-	Store     storage.Cached
+	TimeOut time.Duration
+	Service services.Service
+	Store   storage.Cached
 }
 
 type TickerMeta struct {
@@ -74,7 +74,7 @@ func NewGetGroup(cont *DuiCont) {
 		}
 		fmt.Println(len(topList))
 
-		for _, worker := range workList{
+		for _, worker := range workList {
 			wg.Add(1)
 			go worker(&wg, cont)
 		}

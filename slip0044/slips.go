@@ -10,8 +10,8 @@ import (
 
 type TrustWalletSlips struct {
 	TWSlipsWithCrypto map[string]string
-	Contract   string
-	CoinSymbol string
+	Contract          string
+	CoinSymbol        string
 }
 
 func AddTrustHexBySlip() (map[string]string, error) {

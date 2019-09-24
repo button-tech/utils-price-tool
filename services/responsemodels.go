@@ -31,8 +31,8 @@ type DocsPrices struct {
 
 // DTO for crypto-compare response
 type Currency struct {
-	TOSYMBOL 	      string `json:"TOSYMBOL"`
-	FROMSYMBOL        string  `json:"FROMSYMBOL"`
+	TOSYMBOL        string  `json:"TOSYMBOL"`
+	FROMSYMBOL      string  `json:"FROMSYMBOL"`
 	PRICE           float64 `json:"PRICE"`
 	CHANGEPCT24HOUR float64 `json:"CHANGEPCT24HOUR"`
 	CHANGEPCTHOUR   float64 `json:"CHANGEPCTHOUR"`

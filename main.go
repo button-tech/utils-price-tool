@@ -26,9 +26,9 @@ func main() {
 
 	// Container for tasks
 	toTask := tasks.DuiCont{
-		TimeOut:   time.Second * 3,
-		Service:   serviceGetPrices,
-		Store:     store,
+		TimeOut: time.Second * 3,
+		Service: serviceGetPrices,
+		Store:   store,
 	}
 
 	go tasks.NewGetGroup(&toTask)

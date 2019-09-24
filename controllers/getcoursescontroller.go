@@ -8,7 +8,7 @@ import (
 )
 
 type controller struct {
-	store    storage.Cached
+	store storage.Cached
 }
 
 func New(store storage.Cached) *controller {
@@ -47,7 +47,8 @@ func (cr *controller) getCourses(c *gin.Context) {
 		return
 	}
 
-	a := req.API; switch a {
+	a := req.API
+	switch a {
 	case "cmc":
 		result, err := cr.converter(&req, a)
 		if err != nil {
@@ -112,7 +113,7 @@ func (cr *controller) Mount(r *gin.Engine) {
 	}
 }
 
-func(cr *controller) mapping(req *request, api, ch string) []*response {
+func (cr *controller) mapping(req *request, api, ch string) []*response {
 	result := make([]*response, 0)
 	stored := cr.store.Get()[storage.Api(api)]
 
@@ -140,7 +141,7 @@ func(cr *controller) mapping(req *request, api, ch string) []*response {
 	return result
 }
 
-func changesControl(m map[string]string, s *storage.Details , c string) map[string]string {
+func changesControl(m map[string]string, s *storage.Details, c string) map[string]string {
 	switch c {
 	case "1":
 		if s.ChangePCTHour != "" {
@@ -160,7 +161,8 @@ func changesControl(m map[string]string, s *storage.Details , c string) map[stri
 }
 
 func (cr *controller) converter(req *request, api string) ([]*response, error) {
-	a := api; switch a {
+	a := api
+	switch a {
 	case "cmc", "crc":
 		resp := cr.switcher(req, a)
 		if resp == nil {
@@ -172,6 +174,6 @@ func (cr *controller) converter(req *request, api string) ([]*response, error) {
 	}
 }
 
-func(cr *controller) switcher(req *request, api string) []*response {
+func (cr *controller) switcher(req *request, api string) []*response {
 	return cr.mapping(req, api, req.Change)
 }
