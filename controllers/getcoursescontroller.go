@@ -103,7 +103,7 @@ func (cr *controller) Mount(r *gin.Engine) {
 	}
 }
 
-func (cr *controller) mapping(req *request, api, ch string) []*response {
+func (cr *controller) mapping(req *request, api string) []*response {
 	result := make([]*response, 0)
 	stored := cr.store.Get()[storage.Api(api)]
 
@@ -116,7 +116,7 @@ func (cr *controller) mapping(req *request, api, ch string) []*response {
 			for _, t := range req.Tokens {
 				if val, ok := fiatVal[storage.CryptoCurrency(strings.ToLower(t))]; ok {
 					contract := map[string]string{t: val.Price}
-					if contract = changesControl(contract, val, ch); contract == nil {
+					if contract = changesControl(contract, val, req.Change); contract == nil {
 						return nil
 					} else {
 						price.Rates = append(price.Rates, contract)
@@ -154,7 +154,7 @@ func (cr *controller) converter(req *request, api string) ([]*response, error) {
 	a := api
 	switch a {
 	case "cmc", "crc":
-		resp := cr.switcher(req, a)
+		resp := cr.mapping(req, a)
 		if resp == nil {
 			return nil, errors.New("no matches API")
 		}
@@ -162,8 +162,4 @@ func (cr *controller) converter(req *request, api string) ([]*response, error) {
 	default:
 		return nil, errors.New("no matches API")
 	}
-}
-
-func (cr *controller) switcher(req *request, api string) []*response {
-	return cr.mapping(req, api, req.Change)
 }
