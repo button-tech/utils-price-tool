@@ -12,8 +12,6 @@ import (
 	"strings"
 )
 
-//var currencies = []string{"USD", "EUR", "RUB"}
-
 var currencies = []string{
 	"AED",
 	"AFN",
@@ -184,22 +182,9 @@ var currencies = []string{
 	"ZWL",
 }
 
-var convertedCurrencies = map[string]string{
-	"0x0000000000000000000000000000000000000000": "BTC",
-	"0x000000000000000000000000000000000000003C": "ETH",
-	"0x0000000000000000000000000000000000000002": "LTC",
-	"0x000000000000000000000000000000000000003D": "ETC",
-	"0x0000000000000000000000000000000000000091": "BCH",
-	"0x0000000000000000000000000000000000579BFC": "WAVES",
-	"0x0000000000000000000000000000000000000094": "XLM",
-	"0x00000000000000000000000000000000000000C2": "EOS",
-	"0x00000000000000000000000000000000000002CA": "BNB",
-	"0x0000000000000000000000000000000000000090": "XRP",
-}
-
 type Service interface {
 	GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error)
-	GetPricesCRC() (storage.FiatMap, error)
+	GetPricesCRC(list map[string]string) (storage.FiatMap, error)
 	GetTopList(c map[string]string) (map[string]string, error)
 }
 
@@ -210,17 +195,16 @@ func New() Service {
 }
 
 // Create from hard-code tokens request data
-func InitRequestData() TokensWithCurrencies {
+func CreateRequestData(list map[string]string) TokensWithCurrencies {
 	tokensMultiCurrencies := TokensWithCurrencies{}
-	tokens := make([]Token, 0)
 	tokensOneCurrency := TokensWithCurrency{}
+	tokens := make([]Token, 0)
 
-	for k := range convertedCurrencies {
+	for _, c := range list {
 		token := Token{}
-		token.Contract = k
+		token.Contract = c
 		tokens = append(tokens, token)
 	}
-
 	tokensOneCurrency.Tokens = tokens
 
 	for _, c := range currencies {
@@ -235,13 +219,12 @@ func InitRequestData() TokensWithCurrencies {
 func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 
 	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
-
 	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")})
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	list := TopList{}
+	list := topList{}
 	if err = rq.ToJSON(&list); err != nil {
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
@@ -253,7 +236,7 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 	topListMap := make(map[string]string)
 	for _, item := range list.Data {
 		if val, ok := c[item.Symbol]; ok {
-			topListMap[val] = item.Symbol
+			topListMap[item.Symbol] = val
 		}
 	}
 
@@ -277,13 +260,12 @@ func storeMapsConstructor() maps {
 func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
 
 	url := os.Getenv("TRUST_URL")
-
 	rq, err := req.Post(url, req.BodyJSON(tokens))
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	gotPrices := GotPrices{}
+	gotPrices := gotPrices{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
@@ -291,7 +273,6 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 	maps := storeMapsConstructor()
 	for _, v := range gotPrices.Docs {
 		details := storage.Details{}
-
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
@@ -303,27 +284,24 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 }
 
 // Get prices from crypt-compare
-func (s *service) GetPricesCRC() (storage.FiatMap, error) {
-
-	var fiats string
-	for _, v := range currencies {
-		fiats += v + ","
-	}
-
-	url := "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=" + fiats
+func (s *service) GetPricesCRC(list map[string]string) (storage.FiatMap, error) {
 
 	var forParams string
-	for _, k := range convertedCurrencies {
+	for k := range list {
 		forParams += k + ","
 	}
 
-	rq, err := req.Get(url, req.Param{"tsyms": forParams})
+	url := "https://min-api.cryptocompare.com/data/pricemultifull"
+	rq, err := req.Get(url, req.Param{
+		"fsyms": forParams,
+		"tsyms": "USD,EUR,RUB",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("can not make req: %v", err)
 	}
 
 	byteRq := rq.Bytes()
-	m, err := crcFastJson(byteRq)
+	m, err := crcFastJson(byteRq, list)
 	if err != nil {
 		return nil, fmt.Errorf("can not do fastJson: %v", err)
 	}
@@ -334,52 +312,49 @@ func (s *service) GetPricesCRC() (storage.FiatMap, error) {
 
 		for _, i := range v {
 			details := storage.Details{}
-			details.Price = strconv.FormatFloat(1/i.PRICE, 'f', -1, 64)
-			details.ChangePCT24Hour = strconv.FormatFloat(i.CHANGEPCT24HOUR, 'f', 2, 64)
-			details.ChangePCTHour = strconv.FormatFloat(i.CHANGEPCTHOUR, 'f', 2, 64)
+			details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
+			details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
+			details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
 
-			priceMap[storage.CryptoCurrency(strings.ToLower(i.TOSYMBOL))] = &details
+			priceMap[storage.CryptoCurrency(strings.ToLower(i.FromSymbol))] = &details
 		}
 
 		fiatMap[storage.Fiat(k)] = priceMap
 	}
-
 	return fiatMap, nil
 }
 
-func crcFastJson(byteRq []byte) (map[string][]*Currency, error) {
-	m := make(map[string][]*Currency)
-
+func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency, error) {
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
 	if err != nil {
 		return nil, fmt.Errorf("can not parseBytes: %v", err)
 	}
 
+	m := make(map[string][]*currency)
+
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
+		if val, ok := list[string(k)]; ok {
+			crypto := v.GetObject()
+			crypto.Visit(func(key []byte, value *fastjson.Value) {
 
-		currencies := make([]*Currency, 0)
-
-		fiats := v.GetObject()
-		fiats.Visit(func(key []byte, value *fastjson.Value) {
-			currency := Currency{}
-
-			if err := json.Unmarshal([]byte(value.String()), &currency); err != nil {
-				log.Printf("can not unmarshal elem: %v", value.String())
-				return
-			}
-
-			for t, c := range convertedCurrencies {
-				if c == currency.TOSYMBOL {
-					currency.TOSYMBOL = t
+				c := currency{}
+				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
+					log.Printf("can not unmarshal elem: %v", value.String())
+					return
 				}
-			}
-			currencies = append(currencies, &currency)
 
-			m[string(k)] = currencies
-		})
+				c.FromSymbol = val
+
+				valM, okM := m[c.ToSymbol]
+				if !okM {
+					m[c.ToSymbol] = make([]*currency, 0)
+				}
+				valM = append(valM, &c)
+				m[c.ToSymbol] = valM
+			})
+		}
 	})
-
 	return m, nil
 }

@@ -1,6 +1,8 @@
 package services
 
-import "time"
+import (
+	"time"
+)
 
 type TokensWithCurrency struct {
 	Currency string  `json:"currency"`
@@ -11,44 +13,44 @@ type Token struct {
 	Contract string `json:"contract"`
 }
 
-// Data to get prices to trust-wallet
+// data to get prices to trust-wallet
 type TokensWithCurrencies struct {
 	Tokens []TokensWithCurrency
 }
 
 // DTO for coin-market-cap response
-type GotPrices struct {
+type gotPrices struct {
 	Status   bool         `json:"status"`
-	Docs     []DocsPrices `json:"docs"`
+	Docs     []docsPrices `json:"docs"`
 	Currency string       `json:"currency"`
 }
 
-type DocsPrices struct {
+type docsPrices struct {
 	Price            string `json:"price"`
 	Contract         string `json:"contract"`
 	PercentChange24H string `json:"percent_change_24h"`
 }
 
 // DTO for crypto-compare response
-type Currency struct {
-	TOSYMBOL        string  `json:"TOSYMBOL"`
-	FROMSYMBOL      string  `json:"FROMSYMBOL"`
-	PRICE           float64 `json:"PRICE"`
-	CHANGEPCT24HOUR float64 `json:"CHANGEPCT24HOUR"`
-	CHANGEPCTHOUR   float64 `json:"CHANGEPCTHOUR"`
+type currency struct {
+	ToSymbol        string  `json:"TOSYMBOL"`
+	FromSymbol      string  `json:"FROMSYMBOL"`
+	Price           float64 `json:"PRICE"`
+	ChangePCT24Hour float64 `json:"CHANGEPCT24HOUR"`
+	ChangePCTHour   float64 `json:"CHANGEPCTHOUR"`
 }
 
 // DTO for top-list response
-type TopList struct {
+type topList struct {
 	Status struct {
 		Timestamp    time.Time   `json:"timestamp"`
 		ErrorCode    int         `json:"error_code"`
 		ErrorMessage interface{} `json:"error_message"`
 	} `json:"status"`
-	Data []Data `json:"data"`
+	Data []data `json:"data"`
 }
 
-type Data struct {
+type data struct {
 	ID     int    `json:"id"`
 	Name   string `json:"name"`
 	Symbol string `json:"symbol"`

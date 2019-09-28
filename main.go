@@ -11,10 +11,7 @@ import (
 	"time"
 )
 
-//1.todo: debug fetch-task
-
 //todo: rewrite at fast-http
-
 //todo: add packages response, request, error
 
 func main() {
@@ -37,5 +34,4 @@ func main() {
 	if err := r.Run(":5000"); err != nil {
 		log.Fatal(err)
 	}
-
 }

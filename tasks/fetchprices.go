@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"fmt"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/button-tech/utils-price-tool/slip0044"
 	"github.com/button-tech/utils-price-tool/storage"
@@ -22,24 +21,33 @@ type TickerMeta struct {
 	End   time.Time
 }
 
-type Worker func(wg *sync.WaitGroup, cont *DuiCont)
+type Worker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
 
-func Worker2(wg *sync.WaitGroup, cont *DuiCont) {
-	tokens := services.InitRequestData()
+// CMC worker
+func CMCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
+	tokens := services.CreateRequestData(list)
+	tokensWG := sync.WaitGroup{}
+
 	for _, t := range tokens.Tokens {
+		tokensWG.Add(1)
+		go func(token services.TokensWithCurrency, tWG *sync.WaitGroup) {
+			got, err := cont.Service.GetPricesCMC(token)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			cont.Store.Set("cmc", got)
 
-		got, err := cont.Service.GetPricesCMC(t)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		cont.Store.Set("cmc", got)
+			tWG.Done()
+		}(t, &tokensWG)
 	}
+	tokensWG.Wait()
 	wg.Done()
 }
 
-func Worker1(wg *sync.WaitGroup, cont *DuiCont) {
-	res, err := cont.Service.GetPricesCRC()
+// CRC worker
+func CRCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
+	res, err := cont.Service.GetPricesCRC(list)
 	if err != nil {
 		log.Println(err)
 		return
@@ -61,8 +69,8 @@ func NewGetGroup(cont *DuiCont) {
 	wg := sync.WaitGroup{}
 
 	workList := []Worker{
-		Worker1,
-		Worker2,
+		CMCWorker,
+		CRCWorker,
 	}
 
 	for ; true; <-ticker {
@@ -70,14 +78,14 @@ func NewGetGroup(cont *DuiCont) {
 		topList, err := cont.Service.GetTopList(converted)
 		if err != nil {
 			log.Println(err)
-			return
+			continue
 		}
-		fmt.Println(len(topList))
 
 		for _, worker := range workList {
 			wg.Add(1)
-			go worker(&wg, cont)
+			go worker(&wg, cont, topList)
 		}
+
 		log.Printf("Count goroutines: %v", runtime.NumGoroutine())
 		wg.Wait()
 

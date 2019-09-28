@@ -136,6 +136,7 @@ func changesControl(m map[string]string, s *storage.Details, c string) map[strin
 	case "1":
 		if s.ChangePCTHour != "" {
 			m["percent_change"] = s.ChangePCTHour
+
 			return m
 		}
 		return nil
