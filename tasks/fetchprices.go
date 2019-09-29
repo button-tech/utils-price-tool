@@ -25,7 +25,7 @@ type Worker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
 
 // CMC worker
 func CMCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	tokens := services.CreateRequestData(list)
+	tokens := services.CreateCMCRequestData(list)
 	tokensWG := sync.WaitGroup{}
 
 	for _, t := range tokens.Tokens {
@@ -47,11 +47,7 @@ func CMCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 
 // CRC worker
 func CRCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	res, err := cont.Service.GetPricesCRC(list)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	res := cont.Service.GetPricesCRC(list)
 	cont.Store.Set("crc", res)
 	wg.Done()
 }

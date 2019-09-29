@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var currencies = []string{
@@ -184,7 +185,7 @@ var currencies = []string{
 
 type Service interface {
 	GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error)
-	GetPricesCRC(list map[string]string) (storage.FiatMap, error)
+	GetPricesCRC(list map[string]string) storage.FiatMap
 	GetTopList(c map[string]string) (map[string]string, error)
 }
 
@@ -195,7 +196,7 @@ func New() Service {
 }
 
 // Create from hard-code tokens request data
-func CreateRequestData(list map[string]string) TokensWithCurrencies {
+func CreateCMCRequestData(list map[string]string) TokensWithCurrencies {
 	tokensMultiCurrencies := TokensWithCurrencies{}
 	tokensOneCurrency := TokensWithCurrency{}
 	tokens := make([]Token, 0)
@@ -284,44 +285,81 @@ func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 }
 
 // Get prices from crypt-compare
-func (s *service) GetPricesCRC(list map[string]string) (storage.FiatMap, error) {
+//func (s *service) GetPricesCRC(list map[string]string) (storage.FiatMap, error) {
+//
+//	var forParams string
+//	for k := range list {
+//		forParams += k + ","
+//	}
+//
+//	url := "https://min-api.cryptocompare.com/data/pricemultifull"
+//	rq, err := req.Get(url, req.Param{
+//		"fsyms": forParams,
+//		"tsyms": "USD,EUR,RUB",
+//	})
+//	if err != nil {
+//		return nil, fmt.Errorf("can not make req: %v", err)
+//	}
+//
+//	byteRq := rq.Bytes()
+//	m, err := crcFastJson(byteRq, list)
+//	if err != nil {
+//		return nil, fmt.Errorf("can not do fastJson: %v", err)
+//	}
+//
+//	fiatMap := make(storage.FiatMap)
+//	for k, v := range m {
+//		priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+//
+//		for _, i := range v {
+//			details := storage.Details{}
+//			details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
+//			details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
+//			details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
+//
+//			priceMap[storage.CryptoCurrency(strings.ToLower(i.FromSymbol))] = &details
+//		}
+//
+//		fiatMap[storage.Fiat(k)] = priceMap
+//	}
+//	return fiatMap, nil
+//}
 
-	var forParams string
+func CreateCRCRequestData() []string {
+	sortedCurrencies := make([]string, 0)
+
+	n := 0
+	step := 25
+	for i := 0; i < 6; i++ {
+		c := strings.Join(currencies[n:step], ",")
+		sortedCurrencies = append(sortedCurrencies, c)
+		n += 25
+		step += 25
+	}
+	c := strings.Join(currencies[150:], ",")
+	sortedCurrencies = append(sortedCurrencies, c)
+
+	return sortedCurrencies
+}
+
+func (s *service) GetPricesCRC(list map[string]string) storage.FiatMap {
+	var fsyms string
 	for k := range list {
-		forParams += k + ","
+		fsyms += k + ","
 	}
 
-	url := "https://min-api.cryptocompare.com/data/pricemultifull"
-	rq, err := req.Get(url, req.Param{
-		"fsyms": forParams,
-		"tsyms": "USD,EUR,RUB",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("can not make req: %v", err)
+	sortedCurrencies := CreateCRCRequestData()
+	c := make(chan map[string][]*currency, len(sortedCurrencies))
+
+	wg := sync.WaitGroup{}
+	for _, tsyms := range sortedCurrencies {
+		wg.Add(1)
+		go crcPricesRequests(tsyms, fsyms, list, c, &wg)
 	}
+	wg.Wait()
+	close(c)
 
-	byteRq := rq.Bytes()
-	m, err := crcFastJson(byteRq, list)
-	if err != nil {
-		return nil, fmt.Errorf("can not do fastJson: %v", err)
-	}
-
-	fiatMap := make(storage.FiatMap)
-	for k, v := range m {
-		priceMap := make(map[storage.CryptoCurrency]*storage.Details)
-
-		for _, i := range v {
-			details := storage.Details{}
-			details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
-			details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
-			details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
-
-			priceMap[storage.CryptoCurrency(strings.ToLower(i.FromSymbol))] = &details
-		}
-
-		fiatMap[storage.Fiat(k)] = priceMap
-	}
-	return fiatMap, nil
+	return fiatMapping(c)
 }
 
 func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency, error) {
@@ -357,4 +395,48 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency,
 		}
 	})
 	return m, nil
+}
+
+func crcPricesRequests(tsyms, fsyms string, list map[string]string, c chan <- map[string][]*currency, wg *sync.WaitGroup)  {
+	url := "https://min-api.cryptocompare.com/data/pricemultifull"
+	rq, err := req.Get(url, req.Param{
+		"fsyms": fsyms,
+		"tsyms": tsyms,
+	})
+	if err != nil {
+		log.Printf("can not make req: %v", err)
+	}
+
+	byteRq := rq.Bytes()
+	m, err := crcFastJson(byteRq, list)
+	if err != nil {
+		log.Printf("can not do fastJson: %v", err)
+	}
+
+	c <- m
+	wg.Done()
+}
+
+func fiatMapping(c <- chan map[string][]*currency) storage.FiatMap {
+	fiatMap := make(storage.FiatMap)
+
+	for range c {
+		for k, v := range <- c {
+			priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+
+			for _, i := range v {
+				details := storage.Details{}
+				details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
+				details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
+				details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
+
+				priceMap[storage.CryptoCurrency(strings.ToLower(i.FromSymbol))] = &details
+			}
+			if _, ok := fiatMap[storage.Fiat(k)]; !ok {
+				fiatMap[storage.Fiat(k)] = map[storage.CryptoCurrency]*storage.Details{}
+			}
+			fiatMap[storage.Fiat(k)] = priceMap
+		}
+	}
+	return fiatMap
 }
