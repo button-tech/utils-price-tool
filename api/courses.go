@@ -1,19 +1,13 @@
-package controllers
+package api
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/button-tech/utils-price-tool/storage"
-	"github.com/gin-gonic/gin"
+	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/valyala/fasthttp"
 	"strings"
 )
-
-type controller struct {
-	store storage.Cached
-}
-
-func New(store storage.Cached) *controller {
-	return &controller{store: store}
-}
 
 type request struct {
 	Tokens     []string `json:"tokens"`
@@ -40,21 +34,28 @@ type api struct {
 	SupportedChanges []string `json:"supported_changes"`
 }
 
-func (cr *controller) getCourses(c *gin.Context) {
-	req := request{}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"err": err})
-		return
+func (ac *apiController) getCourses(ctx *routing.Context) error {
+	var req request
+	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
+		//respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
+		//	"error": err.Error(),
+		//})
+		return err
 	}
 
 	a := req.API; switch a {
 	case "cmc", "crc":
-		result, err := cr.converter(&req, a)
+		result, err := ac.converter(&req, a)
 		if err != nil {
-			c.JSON(400, gin.H{"error": "no matches API changes"})
-			return
+			//respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
+			//	"error":"no matches API changes",
+			//})
+			return err
 		}
-		c.JSON(200, gin.H{"data": result})
+		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
+			"data":result,
+		})
+		return nil
 
 	default:
 		supportedCRC := []string{"0", "1", "24"}
@@ -72,11 +73,15 @@ func (cr *controller) getCourses(c *gin.Context) {
 		API := []api{crc, cmc}
 		list := listApi{API: API}
 
-		c.JSON(400, gin.H{"error": &list, "description": "please, use these API"})
+		respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
+			"error": &list,
+			"description": "please, use these API",
+		})
+		return nil
 	}
 }
 
-func (cr *controller) apiInfo(c *gin.Context) {
+func (ac *apiController) apiInfo(ctx *routing.Context) error {
 	supportedCRC := []string{"0", "1", "24"}
 	crc := api{
 		Name:             "crc",
@@ -91,21 +96,15 @@ func (cr *controller) apiInfo(c *gin.Context) {
 
 	API := []api{crc, cmc}
 	list := listApi{API: API}
-
-	c.JSON(200, &list)
+	respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
+		"api": &list,
+	})
+	return nil
 }
 
-func (cr *controller) Mount(r *gin.Engine) {
-	v1 := r.Group("/courses/v1/")
-	{
-		v1.POST("/prices", cr.getCourses)
-		v1.GET("/list", cr.apiInfo)
-	}
-}
-
-func (cr *controller) mapping(req *request, api string) []*response {
+func (ac *apiController) mapping(req *request, api string) []*response {
 	result := make([]*response, 0)
-	stored := cr.store.Get()[storage.Api(api)]
+	stored := ac.store.Get()[storage.Api(api)]
 
 	for _, c := range req.Currencies {
 		price := response{}
@@ -151,11 +150,11 @@ func changesControl(m map[string]string, s *storage.Details, c string) map[strin
 	}
 }
 
-func (cr *controller) converter(req *request, api string) ([]*response, error) {
+func (ac *apiController) converter(req *request, api string) ([]*response, error) {
 	a := api
 	switch a {
 	case "cmc", "crc":
-		resp := cr.mapping(req, a)
+		resp := ac.mapping(req, a)
 		if resp == nil {
 			return nil, errors.New("no matches API")
 		}
@@ -164,3 +163,9 @@ func (cr *controller) converter(req *request, api string) ([]*response, error) {
 		return nil, errors.New("no matches API")
 	}
 }
+
+func (s *Server) initCoursesAPI()  {
+	s.G.Post("/prices", s.ac.getCourses)
+	s.G.Get("/list", s.ac.apiInfo)
+}
+
