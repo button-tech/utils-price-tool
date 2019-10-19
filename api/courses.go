@@ -21,13 +21,13 @@ type response struct {
 	Rates    []map[string]string `json:"rates"`
 }
 
-type listApi struct {
-	API []api `json:"api"`
-	//Time             struct {
-	//	Start int `json:"start"`
-	//	End   int `json:"end"`
-	//} `json:"time"`
-}
+//type listApi struct {
+//	API []api `json:"api"`
+//	//Time             struct {
+//	//	Start int `json:"start"`
+//	//	End   int `json:"end"`
+//	//} `json:"time"`
+//}
 
 type api struct {
 	Name             string   `json:"name"`
@@ -71,11 +71,10 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 		}
 
 		API := []api{crc, cmc}
-		list := listApi{API: API}
 
 		respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
-			"error": &list,
-			"description": "please, use these API",
+			"api": API,
+			"error": "please, use these API",
 		})
 		return nil
 	}
@@ -95,9 +94,8 @@ func (ac *apiController) apiInfo(ctx *routing.Context) error {
 	}
 
 	API := []api{crc, cmc}
-	list := listApi{API: API}
 	respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
-		"api": &list,
+		"api": API,
 	})
 	return nil
 }

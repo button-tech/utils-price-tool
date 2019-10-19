@@ -18,7 +18,7 @@ func AddTrustHexBySlip() (map[string]string, error) {
 	slip := bip44.Create()
 	constants := slip.Get()
 
-	trustWalletSlips := make(map[string]string, 0)
+	trustWalletSlips := make(map[string]string)
 
 	// Because cycle started by index 1, we can't add BTC by makeHexString()
 	trustWalletSlips["BTC"] = "0x0000000000000000000000000000000000000000"

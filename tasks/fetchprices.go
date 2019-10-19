@@ -54,7 +54,8 @@ func CRCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 
 //Pool of workers
 func NewGetGroup(cont *DuiCont) {
-	ticker := time.Tick(cont.TimeOut)
+	t := time.NewTicker(cont.TimeOut)
+	//ticker := time.Tick(cont.TimeOut)
 
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
@@ -69,7 +70,7 @@ func NewGetGroup(cont *DuiCont) {
 		CRCWorker,
 	}
 
-	for ; true; <-ticker {
+	for ; true; <-t.C {
 		start := time.Now()
 		topList, err := cont.Service.GetTopList(converted)
 		if err != nil {
