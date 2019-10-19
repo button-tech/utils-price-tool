@@ -23,7 +23,6 @@ type TickerMeta struct {
 
 type Worker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
 
-// CMC worker
 func CMCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 	tokens := services.CreateCMCRequestData(list)
 	tokensWG := sync.WaitGroup{}
@@ -45,7 +44,6 @@ func CMCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 	wg.Done()
 }
 
-// CRC worker
 func CRCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 	res := cont.Service.GetPricesCRC(list)
 	cont.Store.Set("crc", res)
@@ -55,7 +53,6 @@ func CRCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 //Pool of workers
 func NewGetGroup(cont *DuiCont) {
 	t := time.NewTicker(cont.TimeOut)
-	//ticker := time.Tick(cont.TimeOut)
 
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {

@@ -37,9 +37,6 @@ type api struct {
 func (ac *apiController) getCourses(ctx *routing.Context) error {
 	var req request
 	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
-		//respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
-		//	"error": err.Error(),
-		//})
 		return err
 	}
 
@@ -47,9 +44,6 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 	case "cmc", "crc":
 		result, err := ac.converter(&req, a)
 		if err != nil {
-			//respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
-			//	"error":"no matches API changes",
-			//})
 			return err
 		}
 		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{

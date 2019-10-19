@@ -252,7 +252,6 @@ type maps struct {
 	PriceMap map[storage.CryptoCurrency]*storage.Details
 }
 
-// Make maps for storage
 func storeMapsConstructor() maps {
 	return maps{
 		FiatMap:  make(storage.FiatMap),
@@ -260,7 +259,6 @@ func storeMapsConstructor() maps {
 	}
 }
 
-// Get prices from trust-wallet
 func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
 
 	url := os.Getenv("TRUST_URL")

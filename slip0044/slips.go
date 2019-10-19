@@ -19,8 +19,6 @@ func AddTrustHexBySlip() (map[string]string, error) {
 	constants := slip.Get()
 
 	trustWalletSlips := make(map[string]string)
-
-	// Because cycle started by index 1, we can't add BTC by makeHexString()
 	trustWalletSlips["BTC"] = "0x0000000000000000000000000000000000000000"
 
 	for i := 1; i < len(constants); i++ {
@@ -47,7 +45,7 @@ func makeHexString(s string) (string, error) {
 
 	ss := make([]string, 0)
 
-	// Start from 1, because 1 item is 8. It should be skipped
+	// Start from 1, because 1st item is 8. It should be skipped
 	for i := 1; i < len(splitter); i++ {
 		if splitter[i] != "0" {
 			ss = append(splitter[i:])
