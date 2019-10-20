@@ -40,14 +40,15 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 		return err
 	}
 
-	a := req.API; switch a {
+	a := req.API
+	switch a {
 	case "cmc", "crc", "huobi":
 		result, err := ac.converter(&req, a)
 		if err != nil {
 			return err
 		}
 		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
-			"data":result,
+			"data": result,
 		})
 		return nil
 
@@ -67,7 +68,7 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 		API := []api{crc, cmc}
 
 		respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
-			"api": API,
+			"api":   API,
 			"error": "please, use these API",
 		})
 		return nil
@@ -162,8 +163,7 @@ func (ac *apiController) converter(req *request, api string) ([]*response, error
 	}
 }
 
-func (s *Server) initCoursesAPI()  {
+func (s *Server) initCoursesAPI() {
 	s.G.Post("/prices", s.ac.getCourses)
 	s.G.Get("/list", s.ac.apiInfo)
 }
-

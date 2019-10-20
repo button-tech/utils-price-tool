@@ -21,8 +21,6 @@ type TickerMeta struct {
 	End   time.Time
 }
 
-type mappingWorker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
-
 //Pool of workers
 func NewGetGroup(cont *DuiCont) {
 	t := time.NewTicker(cont.TimeOut)

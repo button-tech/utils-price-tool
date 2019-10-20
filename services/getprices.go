@@ -185,15 +185,14 @@ var currencies = []string{
 }
 
 const (
-	urlHuobi = "https://api.hbdm.com/api/v1/contract_index"
+	urlHuobi   = "https://api.hbdm.com/api/v1/contract_index"
 	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
-	urlCRC = "https://min-api.cryptocompare.com/data/pricemultifull"
+	urlCRC     = "https://min-api.cryptocompare.com/data/pricemultifull"
 )
 
 var (
 	urlTrustWallet = os.Getenv("TRUST_URL")
-	topListAPIKey = os.Getenv("API_KEY")
-
+	topListAPIKey  = os.Getenv("API_KEY")
 )
 
 type Service interface {
@@ -203,7 +202,7 @@ type Service interface {
 	GetPricesHUOBI(list map[string]string) storage.FiatMap
 }
 
-type service struct{
+type service struct {
 	list map[string]string
 }
 
@@ -324,7 +323,7 @@ func (s *service) GetPricesCRC(list map[string]string) storage.FiatMap {
 	wg := sync.WaitGroup{}
 	for _, tsyms := range sortedCurrencies {
 		wg.Add(1)
-		go crcPricesRequest(tsyms, fsyms, list, c , &wg)
+		go crcPricesRequest(tsyms, fsyms, list, c, &wg)
 	}
 	wg.Wait()
 	close(c)
@@ -366,7 +365,7 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*cryptoCom
 	return m, nil
 }
 
-func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan <- map[string][]*cryptoCompare, wg *sync.WaitGroup)  {
+func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan<- map[string][]*cryptoCompare, wg *sync.WaitGroup) {
 	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
@@ -391,11 +390,11 @@ func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
 	done := false
 	for !done {
 		select {
-		case m, ok := <- c:
-				if !ok {
-					done = true
-					break
-				}
+		case m, ok := <-c:
+			if !ok {
+				done = true
+				break
+			}
 			for k, v := range m {
 				priceMap := make(map[storage.CryptoCurrency]*storage.Details)
 
@@ -439,7 +438,7 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 	for _, i := range h.Data {
 		if val, ok := list[i.Symbol]; ok {
 			var details storage.Details
-			details.Price =  strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
+			details.Price = strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
 			priceMap[storage.CryptoCurrency(strings.ToLower(val))] = &details
 			fiatMap[storage.Fiat("USD")] = priceMap
 		}

@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+type mappingWorker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
+
 func cmcWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 	tokens := services.CreateCMCRequestData(list)
 	tokensWG := sync.WaitGroup{}

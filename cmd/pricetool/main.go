@@ -35,7 +35,6 @@ func main() {
 		syscall.SIGTERM,
 		syscall.SIGQUIT)
 
-
 	go func() {
 		if err := fasthttp.ListenAndServe(":5000", s.R.HandleRequest); err != nil {
 			log.Fatal(err)
