@@ -41,7 +41,7 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 	}
 
 	a := req.API; switch a {
-	case "cmc", "crc":
+	case "cmc", "crc", "huobi":
 		result, err := ac.converter(&req, a)
 		if err != nil {
 			return err
@@ -87,7 +87,13 @@ func (ac *apiController) apiInfo(ctx *routing.Context) error {
 		SupportedChanges: supportedCMC,
 	}
 
-	API := []api{crc, cmc}
+	supportedHuobi := []string{"0"}
+	huobi := api{
+		Name:             "huobi",
+		SupportedChanges: supportedHuobi,
+	}
+
+	API := []api{crc, cmc, huobi}
 	respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
 		"api": API,
 	})
@@ -145,7 +151,7 @@ func changesControl(m map[string]string, s *storage.Details, c string) map[strin
 func (ac *apiController) converter(req *request, api string) ([]*response, error) {
 	a := api
 	switch a {
-	case "cmc", "crc":
+	case "cmc", "crc", "huobi":
 		resp := ac.mapping(req, a)
 		if resp == nil {
 			return nil, errors.New("no matches API")

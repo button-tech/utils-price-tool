@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/imroc/req"
+	"github.com/pkg/errors"
 	"github.com/valyala/fastjson"
 	"log"
 	"os"
@@ -183,10 +184,23 @@ var currencies = []string{
 	"ZWL",
 }
 
+const (
+	urlHuobi = "https://api.hbdm.com/api/v1/contract_index"
+	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
+	urlCRC = "https://min-api.cryptocompare.com/data/pricemultifull"
+)
+
+var (
+	urlTrustWallet = os.Getenv("TRUST_URL")
+	topListAPIKey = os.Getenv("API_KEY")
+
+)
+
 type Service interface {
 	GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error)
 	GetPricesCRC(list map[string]string) storage.FiatMap
 	GetTopList(c map[string]string) (map[string]string, error)
+	GetPricesHUOBI(list map[string]string) storage.FiatMap
 }
 
 type service struct{
@@ -197,8 +211,8 @@ func New() Service {
 	return &service{}
 }
 
-func CreateCMCRequestData(list map[string]string) TokensWithCurrencies {
-	tokensMultiCurrencies := TokensWithCurrencies{}
+func CreateCMCRequestData(list map[string]string) RequestCoinMarketCap {
+	tokensMultiCurrencies := RequestCoinMarketCap{}
 	tokensOneCurrency := TokensWithCurrency{}
 	tokens := make([]Token, 0)
 
@@ -219,9 +233,7 @@ func CreateCMCRequestData(list map[string]string) TokensWithCurrencies {
 
 // Get top list of crypto-currencies from coin-market
 func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
-
-	url := "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
-	rq, err := req.Get(url, req.Header{"X-CMC_PRO_API_KEY": os.Getenv("API_KEY")})
+	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
@@ -260,14 +272,12 @@ func storeMapsConstructor() maps {
 }
 
 func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
-
-	url := os.Getenv("TRUST_URL")
-	rq, err := req.Post(url, req.BodyJSON(tokens))
+	rq, err := req.Post(urlTrustWallet, req.BodyJSON(tokens))
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
 	}
 
-	gotPrices := gotPrices{}
+	gotPrices := coinMarketCap{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
 		return nil, fmt.Errorf("can not marshal: %v", err)
 	}
@@ -309,7 +319,7 @@ func (s *service) GetPricesCRC(list map[string]string) storage.FiatMap {
 	}
 
 	sortedCurrencies := CreateCRCRequestData()
-	c := make(chan map[string][]*currency, len(sortedCurrencies))
+	c := make(chan map[string][]*cryptoCompare, len(sortedCurrencies))
 
 	wg := sync.WaitGroup{}
 	for _, tsyms := range sortedCurrencies {
@@ -321,14 +331,14 @@ func (s *service) GetPricesCRC(list map[string]string) storage.FiatMap {
 	return fiatMapping(c)
 }
 
-func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency, error) {
+func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*cryptoCompare, error) {
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
 	if err != nil {
 		return nil, fmt.Errorf("can not parseBytes: %v", err)
 	}
 
-	m := make(map[string][]*currency)
+	m := make(map[string][]*cryptoCompare)
 
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
@@ -336,7 +346,7 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency,
 			crypto := v.GetObject()
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
 
-				c := currency{}
+				c := cryptoCompare{}
 				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
 					log.Printf("can not unmarshal elem: %v", value.String())
 					return
@@ -346,7 +356,7 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency,
 
 				valM, okM := m[c.ToSymbol]
 				if !okM {
-					m[c.ToSymbol] = make([]*currency, 0)
+					m[c.ToSymbol] = make([]*cryptoCompare, 0)
 				}
 				valM = append(valM, &c)
 				m[c.ToSymbol] = valM
@@ -356,9 +366,8 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*currency,
 	return m, nil
 }
 
-func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan <- map[string][]*currency, wg *sync.WaitGroup)  {
-	url := "https://min-api.cryptocompare.com/data/pricemultifull"
-	rq, err := req.Get(url, req.Param{
+func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan <- map[string][]*cryptoCompare, wg *sync.WaitGroup)  {
+	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
 	})
@@ -376,7 +385,7 @@ func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan <- map
 	wg.Done()
 }
 
-func fiatMapping(c chan map[string][]*currency) storage.FiatMap {
+func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
 	fiatMap := make(storage.FiatMap)
 
 	done := false
@@ -407,5 +416,33 @@ func fiatMapping(c chan map[string][]*currency) storage.FiatMap {
 		}
 	}
 
+	return fiatMap
+}
+
+func (s *service) GetPricesHUOBI(list map[string]string) storage.FiatMap {
+	rq, err := req.Get(urlHuobi)
+	if err != nil {
+		log.Println(errors.Wrap(err, "huobi"))
+	}
+
+	var h huobi
+	if err := rq.ToJSON(&h); err != nil {
+		log.Println(errors.Wrap(err, "toJSON huobi"))
+	}
+	return huobiMapping(&h, list)
+}
+
+func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
+	fiatMap := make(storage.FiatMap)
+	priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+
+	for _, i := range h.Data {
+		if val, ok := list[i.Symbol]; ok {
+			var details storage.Details
+			details.Price =  strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
+			priceMap[storage.CryptoCurrency(strings.ToLower(val))] = &details
+			fiatMap[storage.Fiat("USD")] = priceMap
+		}
+	}
 	return fiatMap
 }

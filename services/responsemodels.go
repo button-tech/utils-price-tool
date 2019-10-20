@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+type RequestCoinMarketCap struct {
+	Tokens []TokensWithCurrency
+}
+
 type TokensWithCurrency struct {
 	Currency string  `json:"currency"`
 	Tokens   []Token `json:"tokens"`
@@ -13,13 +17,7 @@ type Token struct {
 	Contract string `json:"contract"`
 }
 
-// data to get prices to trust-wallet
-type TokensWithCurrencies struct {
-	Tokens []TokensWithCurrency
-}
-
-// DTO for coin-market-cap response
-type gotPrices struct {
+type coinMarketCap struct {
 	Status   bool         `json:"status"`
 	Docs     []docsPrices `json:"docs"`
 	Currency string       `json:"currency"`
@@ -31,8 +29,7 @@ type docsPrices struct {
 	PercentChange24H string `json:"percent_change_24h"`
 }
 
-// DTO for crypto-compare response
-type currency struct {
+type cryptoCompare struct {
 	ToSymbol        string  `json:"TOSYMBOL"`
 	FromSymbol      string  `json:"FROMSYMBOL"`
 	Price           float64 `json:"PRICE"`
@@ -40,7 +37,6 @@ type currency struct {
 	ChangePCTHour   float64 `json:"CHANGEPCTHOUR"`
 }
 
-// DTO for top-list response
 type topList struct {
 	Status struct {
 		Timestamp    time.Time   `json:"timestamp"`
@@ -55,4 +51,14 @@ type data struct {
 	Name   string `json:"name"`
 	Symbol string `json:"symbol"`
 	Slug   string `json:"slug"`
+}
+
+type huobi struct {
+	Status string `json:"status"`
+	Data   []struct {
+		Symbol     string  `json:"symbol"`
+		IndexPrice float64 `json:"index_price"`
+		IndexTs    int64   `json:"index_ts"`
+	} `json:"data"`
+	Ts int64 `json:"ts"`
 }

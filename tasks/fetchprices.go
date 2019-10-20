@@ -21,34 +21,7 @@ type TickerMeta struct {
 	End   time.Time
 }
 
-type Worker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
-
-func CMCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	tokens := services.CreateCMCRequestData(list)
-	tokensWG := sync.WaitGroup{}
-
-	for _, t := range tokens.Tokens {
-		tokensWG.Add(1)
-		go func(token services.TokensWithCurrency, tWG *sync.WaitGroup) {
-			got, err := cont.Service.GetPricesCMC(token)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			cont.Store.Set("cmc", got)
-
-			tWG.Done()
-		}(t, &tokensWG)
-	}
-	tokensWG.Wait()
-	wg.Done()
-}
-
-func CRCWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	res := cont.Service.GetPricesCRC(list)
-	cont.Store.Set("crc", res)
-	wg.Done()
-}
+type mappingWorker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
 
 //Pool of workers
 func NewGetGroup(cont *DuiCont) {
@@ -62,9 +35,10 @@ func NewGetGroup(cont *DuiCont) {
 
 	wg := sync.WaitGroup{}
 
-	workList := []Worker{
-		CMCWorker,
-		CRCWorker,
+	workList := []mappingWorker{
+		cmcWorker,
+		crcWorker,
+		huobiWorker,
 	}
 
 	for ; true; <-t.C {
