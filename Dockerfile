@@ -3,7 +3,7 @@ FROM golang:latest AS builder
 RUN mkdir /build
 ADD . /build
 WORKDIR /build
-RUN  go build -o bin/main .
+RUN  go build -o bin/main ./cmd/pricetool/
 
 FROM debian:latest
 COPY --from=builder /build/bin /app

@@ -1,11 +1,9 @@
 package tasks
 
 import (
-	"fmt"
 	"github.com/button-tech/utils-price-tool/services"
-	"github.com/button-tech/utils-price-tool/storage/storecrc"
-	"github.com/button-tech/utils-price-tool/storage/storetoplist"
-	"github.com/button-tech/utils-price-tool/storage/storetrustwallet"
+	"github.com/button-tech/utils-price-tool/slip0044"
+	"github.com/button-tech/utils-price-tool/storage"
 	"log"
 	"runtime"
 	"sync"
@@ -13,11 +11,9 @@ import (
 )
 
 type DuiCont struct {
-	TimeOut   time.Duration
-	Service   services.Service
-	Store     storetrustwallet.Storage
-	StoreList storetoplist.Storage
-	StoreCRC  storecrc.Storage
+	TimeOut time.Duration
+	Service services.Service
+	Store   storage.Cached
 }
 
 type TickerMeta struct {
@@ -25,52 +21,41 @@ type TickerMeta struct {
 	End   time.Time
 }
 
-func NewGetGroupTask(cont *DuiCont) {
-	ticker := time.Tick(cont.TimeOut)
+//Pool of workers
+func NewGetGroup(cont *DuiCont) {
+	t := time.NewTicker(cont.TimeOut)
+
+	converted, err := slip0044.AddTrustHexBySlip()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	wg := sync.WaitGroup{}
 
-	go func() {
-		for ; true; <-ticker {
+	workList := []mappingWorker{
+		cmcWorker,
+		crcWorker,
+		huobiWorker,
+	}
 
-			// go to compare
-
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-
-				res, err := cont.Service.GetCRCPrices()
-				if err != nil {
-					log.Println(err)
-					return
-				}
-
-				cont.StoreCRC.Update(res)
-			}()
-
-			// go to trust-wallet
-			tokens := services.InitRequestData()
-
-			ch := make(chan storetrustwallet.GotPrices, 10)
-			var stored []storetrustwallet.GotPrices
-
-			for _, t := range tokens.Tokens {
-					got, err := cont.Service.GetPricesCMC(&t)
-					if err != nil {
-						log.Println(err)
-						return
-					}
-					ch <- got
-
-				item := <-ch
-				stored = append(stored, item)
-			}
-
-			fmt.Println(runtime.NumGoroutine())
-			wg.Wait()
-			cont.Store.Update(&stored)
+	for ; true; <-t.C {
+		start := time.Now()
+		topList, err := cont.Service.GetTopList(converted)
+		if err != nil {
+			log.Println(err)
+			continue
 		}
-	}()
 
-	cont.Store.Get()
-	cont.StoreCRC.Get()
+		for _, worker := range workList {
+			wg.Add(1)
+			go worker(&wg, cont, topList)
+		}
+
+		log.Printf("Count goroutines: %v", runtime.NumGoroutine())
+		wg.Wait()
+
+		end := time.Since(start)
+		log.Println("Time EXEC:", end)
+	}
 }
