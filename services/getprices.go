@@ -422,11 +422,13 @@ func (s *service) GetPricesHUOBI(list map[string]string) storage.FiatMap {
 	rq, err := req.Get(urlHuobi)
 	if err != nil {
 		log.Println(errors.Wrap(err, "huobi"))
+		return nil
 	}
 
 	var h huobi
 	if err := rq.ToJSON(&h); err != nil {
 		log.Println(errors.Wrap(err, "toJSON huobi"))
+		return nil
 	}
 	return huobiMapping(&h, list)
 }

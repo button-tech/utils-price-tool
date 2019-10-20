@@ -104,6 +104,9 @@ func (ac *apiController) apiInfo(ctx *routing.Context) error {
 func (ac *apiController) mapping(req *request, api string) []*response {
 	result := make([]*response, 0)
 	stored := ac.store.Get()[storage.Api(api)]
+	if stored == nil {
+		return nil
+	}
 
 	for _, c := range req.Currencies {
 		price := response{}
