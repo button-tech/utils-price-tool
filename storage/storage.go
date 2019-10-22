@@ -23,11 +23,6 @@ type Cache struct {
 	items Stored
 }
 
-type Cached interface {
-	Set(a Api, f FiatMap)
-	Get() Stored
-}
-
 func NewCache() *Cache {
 	return &Cache{
 		items: make(Stored),

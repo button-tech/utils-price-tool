@@ -13,7 +13,11 @@ type Server struct {
 	R     *routing.Router
 	G     *routing.RouteGroup
 	ac    *apiController
-	store *storage.Cache
+	store getter
+}
+
+type getter interface {
+	Get() (s storage.Stored)
 }
 
 func NewServer(store *storage.Cache) *Server {
@@ -28,7 +32,7 @@ func NewServer(store *storage.Cache) *Server {
 		ctx.Response.Header.Set(
 			"Access-Control-Allow-Headers",
 			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization",
-			)
+		)
 
 		if string(ctx.Method()) == "OPTIONS" {
 			ctx.Abort()
@@ -44,15 +48,13 @@ func NewServer(store *storage.Cache) *Server {
 			if err != nil {
 				respondWithJSON(ctx, fasthttp.StatusInternalServerError, map[string]interface{}{
 					"error": err},
-					)
+				)
 			}
 			ctx.SetContentType("application/json")
 			ctx.SetBody(b)
 		}
-
 		return nil
 	})
-
 	server.initBaseRoute()
 	server.initCoursesAPI()
 
@@ -65,7 +67,7 @@ func (s *Server) initBaseRoute() {
 }
 
 type apiController struct {
-	store *storage.Cache
+	store getter
 }
 
 func respondWithJSON(ctx *routing.Context, code int, payload map[string]interface{}) {

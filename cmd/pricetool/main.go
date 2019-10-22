@@ -10,18 +10,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 func main() {
 	store := storage.NewCache()
-
-	toTask := tasks.DuiCont{
-		TimeOut: time.Minute * 7,
-		Service: services.New(),
-		Store:   store,
-	}
-	go tasks.NewGetGroup(&toTask)
+	go tasks.NewGetGroup(services.New(), store)
 
 	s := api.NewServer(store)
 	server := fasthttp.Server{Handler: s.R.HandleRequest}

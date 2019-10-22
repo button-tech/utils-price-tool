@@ -117,7 +117,7 @@ func (ac *apiController) mapping(req *request, api string) []*response {
 			for _, t := range req.Tokens {
 				if val, ok := fiatVal[storage.CryptoCurrency(strings.ToLower(t))]; ok {
 					contract := map[string]string{t: val.Price}
-					if contract = changesControl(contract, val, req.Change); contract == nil {
+					if contract = changesControl(contract, val, req.Change); len(contract) == 0 {
 						return nil
 					} else {
 						price.Rates = append(price.Rates, contract)
@@ -137,7 +137,6 @@ func changesControl(m map[string]string, s *storage.Details, c string) map[strin
 	case "1":
 		if s.ChangePCTHour != "" {
 			m["percent_change"] = s.ChangePCTHour
-
 			return m
 		}
 		return nil

@@ -12,7 +12,7 @@ import (
 
 type DuiCont struct {
 	TimeOut time.Duration
-	Service services.Service
+	Service *services.Service
 	Store   *storage.Cache
 }
 
@@ -21,9 +21,13 @@ type TickerMeta struct {
 	End   time.Time
 }
 
+type setter interface {
+	Set(a storage.Api, f storage.FiatMap)
+}
+
 //Pool of workers
-func NewGetGroup(cont *DuiCont) {
-	t := time.NewTicker(cont.TimeOut)
+func NewGetGroup(service *services.Service, store setter) {
+	t := time.NewTicker(time.Minute * 7)
 
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
@@ -41,15 +45,14 @@ func NewGetGroup(cont *DuiCont) {
 
 	for ; true; <-t.C {
 		start := time.Now()
-		topList, err := cont.Service.GetTopList(converted)
-		if err != nil {
+		if err := service.GetTopList(converted); err != nil {
 			log.Println(err)
 			continue
 		}
 
 		for _, worker := range workList {
 			wg.Add(1)
-			go worker(&wg, cont, topList)
+			go worker(&wg, service, store)
 		}
 
 		log.Printf("Count goroutines: %v", runtime.NumGoroutine())

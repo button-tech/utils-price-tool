@@ -195,27 +195,22 @@ var (
 	topListAPIKey  = os.Getenv("API_KEY")
 )
 
-type Service interface {
-	GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error)
-	GetPricesCRC(list map[string]string) storage.FiatMap
-	GetTopList(c map[string]string) (map[string]string, error)
-	GetPricesHUOBI(list map[string]string) storage.FiatMap
-}
-
-type service struct {
+type Service struct {
 	list map[string]string
 }
 
-func New() Service {
-	return &service{}
+func New() *Service {
+	return &Service{
+		list: make(map[string]string),
+	}
 }
 
-func CreateCMCRequestData(list map[string]string) RequestCoinMarketCap {
+func (s *Service) CreateCMCRequestData() RequestCoinMarketCap {
 	tokensMultiCurrencies := RequestCoinMarketCap{}
 	tokensOneCurrency := TokensWithCurrency{}
 	tokens := make([]Token, 0)
 
-	for _, c := range list {
+	for _, c := range s.list {
 		token := Token{}
 		token.Contract = c
 		tokens = append(tokens, token)
@@ -231,19 +226,19 @@ func CreateCMCRequestData(list map[string]string) RequestCoinMarketCap {
 }
 
 // Get top list of crypto-currencies from coin-market
-func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
+func (s *Service) GetTopList(c map[string]string) error {
 	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
-		return nil, fmt.Errorf("can not make a request: %v", err)
+		return fmt.Errorf("can not make a request: %v", err)
 	}
 
 	list := topList{}
 	if err = rq.ToJSON(&list); err != nil {
-		return nil, fmt.Errorf("can not marshal: %v", err)
+		return fmt.Errorf("can not marshal: %v", err)
 	}
 
 	if list.Status.ErrorCode != 0 {
-		return nil, fmt.Errorf("bad request: %v", list.Status.ErrorCode)
+		return fmt.Errorf("bad request: %v", list.Status.ErrorCode)
 	}
 
 	topListMap := make(map[string]string)
@@ -254,8 +249,7 @@ func (s *service) GetTopList(c map[string]string) (map[string]string, error) {
 	}
 
 	s.list = topListMap
-
-	return topListMap, nil
+	return nil
 }
 
 type maps struct {
@@ -270,7 +264,7 @@ func storeMapsConstructor() maps {
 	}
 }
 
-func (s *service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
+func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
 	rq, err := req.Post(urlTrustWallet, req.BodyJSON(tokens))
 	if err != nil {
 		return nil, fmt.Errorf("can not make a request: %v", err)
@@ -311,9 +305,9 @@ func CreateCRCRequestData() []string {
 	return sortedCurrencies
 }
 
-func (s *service) GetPricesCRC(list map[string]string) storage.FiatMap {
+func (s *Service) GetPricesCRC() storage.FiatMap {
 	var fsyms string
-	for k := range list {
+	for k := range s.list {
 		fsyms += k + ","
 	}
 
@@ -323,7 +317,7 @@ func (s *service) GetPricesCRC(list map[string]string) storage.FiatMap {
 	wg := sync.WaitGroup{}
 	for _, tsyms := range sortedCurrencies {
 		wg.Add(1)
-		go crcPricesRequest(tsyms, fsyms, list, c, &wg)
+		go crcPricesRequest(tsyms, fsyms, s.list, c, &wg)
 	}
 	wg.Wait()
 	close(c)
@@ -418,7 +412,7 @@ func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
 	return fiatMap
 }
 
-func (s *service) GetPricesHUOBI(list map[string]string) storage.FiatMap {
+func (s *Service) GetPricesHUOBI() storage.FiatMap {
 	rq, err := req.Get(urlHuobi)
 	if err != nil {
 		log.Println(errors.Wrap(err, "huobi"))
@@ -430,7 +424,7 @@ func (s *service) GetPricesHUOBI(list map[string]string) storage.FiatMap {
 		log.Println(errors.Wrap(err, "toJSON huobi"))
 		return nil
 	}
-	return huobiMapping(&h, list)
+	return huobiMapping(&h, s.list)
 }
 
 func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {

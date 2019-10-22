@@ -6,21 +6,21 @@ import (
 	"sync"
 )
 
-type mappingWorker func(wg *sync.WaitGroup, cont *DuiCont, list map[string]string)
+type mappingWorker func(wg *sync.WaitGroup, service *services.Service, store setter)
 
-func cmcWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	tokens := services.CreateCMCRequestData(list)
+func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
+	tokens := service.CreateCMCRequestData()
 	tokensWG := sync.WaitGroup{}
 
 	for _, t := range tokens.Tokens {
 		tokensWG.Add(1)
 		go func(token services.TokensWithCurrency, tWG *sync.WaitGroup) {
-			got, err := cont.Service.GetPricesCMC(token)
+			got, err := service.GetPricesCMC(token)
 			if err != nil {
 				log.Println(err)
 				return
 			}
-			cont.Store.Set("cmc", got)
+			store.Set("cmc", got)
 
 			tWG.Done()
 		}(t, &tokensWG)
@@ -29,14 +29,14 @@ func cmcWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
 	wg.Done()
 }
 
-func crcWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	res := cont.Service.GetPricesCRC(list)
-	cont.Store.Set("crc", res)
+func crcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
+	res := service.GetPricesCRC()
+	store.Set("crc", res)
 	wg.Done()
 }
 
-func huobiWorker(wg *sync.WaitGroup, cont *DuiCont, list map[string]string) {
-	res := cont.Service.GetPricesHUOBI(list)
-	cont.Store.Set("huobi", res)
+func huobiWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
+	res := service.GetPricesHUOBI()
+	store.Set("huobi", res)
 	wg.Done()
 }
