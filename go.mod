@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/button-tech/bip44 v0.0.0-20190917162234-5f5aca5ac992
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-ozzo/ozzo-routing v2.1.4+incompatible // indirect
 	github.com/golang/gddo v0.0.0-20190904175337-72a348e765d2 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
