@@ -13,7 +13,7 @@ import (
 type DuiCont struct {
 	TimeOut time.Duration
 	Service services.Service
-	Store   storage.Cached
+	Store   *storage.Cache
 }
 
 type TickerMeta struct {

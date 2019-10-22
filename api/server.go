@@ -13,10 +13,10 @@ type Server struct {
 	R     *routing.Router
 	G     *routing.RouteGroup
 	ac    *apiController
-	store storage.Cached
+	store *storage.Cache
 }
 
-func NewServer(store storage.Cached) *Server {
+func NewServer(store *storage.Cache) *Server {
 	server := Server{
 		R:     routing.New(),
 		store: store,
@@ -43,7 +43,7 @@ func NewServer(store storage.Cached) *Server {
 			b, err := json.Marshal(err)
 			if err != nil {
 				respondWithJSON(ctx, fasthttp.StatusInternalServerError, map[string]interface{}{
-					"error":err},
+					"error": err},
 					)
 			}
 			ctx.SetContentType("application/json")
@@ -65,7 +65,7 @@ func (s *Server) initBaseRoute() {
 }
 
 type apiController struct {
-	store storage.Cached
+	store *storage.Cache
 }
 
 func respondWithJSON(ctx *routing.Context, code int, payload map[string]interface{}) {

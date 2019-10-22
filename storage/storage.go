@@ -28,13 +28,10 @@ type Cached interface {
 	Get() Stored
 }
 
-func NewCache() Cached {
-	items := make(Stored)
-
-	cache := Cache{
-		items: items,
+func NewCache() *Cache {
+	return &Cache{
+		items: make(Stored),
 	}
-	return &cache
 }
 
 func (c *Cache) Set(a Api, f FiatMap) {
