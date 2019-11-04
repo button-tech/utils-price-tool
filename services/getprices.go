@@ -14,180 +14,10 @@ import (
 	"sync"
 )
 
-var currencies = []string{
-	"AED",
-	"AFN",
-	"ALL",
-	"AMD",
-	"ANG",
-	"AOA",
-	"ARS",
-	"AUD",
-	"AWG",
-	"AZN",
-	"BAM",
-	"BBD",
-	"BDT",
-	"BGN",
-	"BHD",
-	"BIF",
-	"BMD",
-	"BND",
-	"BOB",
-	"BRL",
-	"BSD",
-	"BTC",
-	"BTN",
-	"BWP",
-	"BYN",
-	"BYR",
-	"BZD",
-	"CAD",
-	"CDF",
-	"CHF",
-	"CLF",
-	"CLP",
-	"CNY",
-	"COP",
-	"CRC",
-	"CUC",
-	"CUP",
-	"CVE",
-	"CZK",
-	"DJF",
-	"DKK",
-	"DOP",
-	"DZD",
-	"EGP",
-	"ERN",
-	"ETB",
-	"EUR",
-	"FJD",
-	"FKP",
-	"GBP",
-	"GEL",
-	"GGP",
-	"GHS",
-	"GIP",
-	"GMD",
-	"GNF",
-	"GTQ",
-	"GYD",
-	"HKD",
-	"HNL",
-	"HRK",
-	"HTG",
-	"HUF",
-	"IDR",
-	"ILS",
-	"IMP",
-	"INR",
-	"IQD",
-	"IRR",
-	"ISK",
-	"JEP",
-	"JMD",
-	"JOD",
-	"JPY",
-	"KES",
-	"KGS",
-	"KHR",
-	"KMF",
-	"KPW",
-	"KRW",
-	"KWD",
-	"KYD",
-	"KZT",
-	"LAK",
-	"LBP",
-	"LKR",
-	"LRD",
-	"LSL",
-	"LTL",
-	"LVL",
-	"LYD",
-	"MAD",
-	"MDL",
-	"MGA",
-	"MKD",
-	"MMK",
-	"MNT",
-	"MOP",
-	"MRO",
-	"MUR",
-	"MVR",
-	"MWK",
-	"MXN",
-	"MYR",
-	"MZN",
-	"NAD",
-	"NGN",
-	"NIO",
-	"NOK",
-	"NPR",
-	"NZD",
-	"OMR",
-	"PAB",
-	"PEN",
-	"PGK",
-	"PHP",
-	"PKR",
-	"PLN",
-	"PYG",
-	"QAR",
-	"RON",
-	"RUB",
-	"RWF",
-	"SAR",
-	"SBD",
-	"SCR",
-	"SDG",
-	"SEK",
-	"SGD",
-	"SHP",
-	"SLL",
-	"SOS",
-	"SRD",
-	"STD",
-	"SVC",
-	"SYP",
-	"SZL",
-	"THB",
-	"TJS",
-	"TMT",
-	"TND",
-	"TOP",
-	"TRY",
-	"TTD",
-	"TWD",
-	"TZS",
-	"UAH",
-	"UGX",
-	"USD",
-	"UYU",
-	"UZS",
-	"VEF",
-	"VND",
-	"VUV",
-	"WST",
-	"XAF",
-	"XAG",
-	"XAU",
-	"XCD",
-	"XDR",
-	"XOF",
-	"XPF",
-	"YER",
-	"ZAR",
-	"ZMK",
-	"ZMW",
-	"ZWL",
-}
-
 const (
-	urlHuobi   = "https://api.hbdm.com/api/v1/contract_index"
-	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
-	urlCRC     = "https://min-api.cryptocompare.com/data/pricemultifull"
+	urlHuobi    = "https://api.hbdm.com/api/v1/contract_index"
+	urlTopList  = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
+	urlCRC      = "https://min-api.cryptocompare.com/data/pricemultifull"
 )
 
 var (
@@ -211,9 +41,9 @@ func (s *Service) CreateCMCRequestData() RequestCoinMarketCap {
 	tokens := make([]Token, 0)
 
 	for _, c := range s.list {
-		token := Token{}
-		token.Contract = c
-		tokens = append(tokens, token)
+		tokens = append(tokens, Token{
+			Contract: c},
+			)
 	}
 	tokensOneCurrency.Tokens = tokens
 
@@ -317,14 +147,14 @@ func (s *Service) GetPricesCRC() storage.FiatMap {
 	wg := sync.WaitGroup{}
 	for _, tsyms := range sortedCurrencies {
 		wg.Add(1)
-		go crcPricesRequest(tsyms, fsyms, s.list, c, &wg)
+		go s.crcPricesRequest(tsyms, fsyms, c, &wg)
 	}
 	wg.Wait()
 	close(c)
 	return fiatMapping(c)
 }
 
-func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*cryptoCompare, error) {
+func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error) {
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
 	if err != nil {
@@ -335,7 +165,7 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*cryptoCom
 
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
-		if val, ok := list[string(k)]; ok {
+		if val, ok := s.list[string(k)]; ok {
 			crypto := v.GetObject()
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
 
@@ -359,7 +189,7 @@ func crcFastJson(byteRq []byte, list map[string]string) (map[string][]*cryptoCom
 	return m, nil
 }
 
-func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan<- map[string][]*cryptoCompare, wg *sync.WaitGroup) {
+func (s *Service)crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*cryptoCompare, wg *sync.WaitGroup) {
 	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
@@ -369,7 +199,7 @@ func crcPricesRequest(tsyms, fsyms string, list map[string]string, c chan<- map[
 	}
 
 	byteRq := rq.Bytes()
-	m, err := crcFastJson(byteRq, list)
+	m, err := s.crcFastJson(byteRq)
 	if err != nil {
 		log.Printf("can not do fastJson: %v", err)
 	}
@@ -412,19 +242,17 @@ func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
 	return fiatMap
 }
 
-func (s *Service) GetPricesHUOBI() storage.FiatMap {
+func (s *Service) GetPricesHUOBI() (storage.FiatMap, error) {
 	rq, err := req.Get(urlHuobi)
 	if err != nil {
-		log.Println(errors.Wrap(err, "huobi"))
-		return nil
+		return nil, errors.Wrap(err, "huobi")
 	}
 
 	var h huobi
 	if err := rq.ToJSON(&h); err != nil {
-		log.Println(errors.Wrap(err, "toJSON huobi"))
-		return nil
+		return nil, errors.Wrap(err, "toJSON huobi")
 	}
-	return huobiMapping(&h, s.list)
+	return huobiMapping(&h, s.list), nil
 }
 
 func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
@@ -440,4 +268,24 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 		}
 	}
 	return fiatMap
+}
+
+const (
+	urlCoinBase = "https://api.pro.coinbase.com/products"
+	urlCoinBaseEachPrice = "https://api.pro.coinbase.com/products/%s/ticker"
+)
+
+// In Progress
+func (s *Service) GetPricesCoinBase() error {
+	rq, err := req.Get(urlCoinBase)
+	if err != nil {
+		return errors.Wrap(err, "coin-base request")
+	}
+
+	var c coinBase
+	if err := rq.ToJSON(&c); err != nil {
+		return errors.Wrap(err, "toJSON coin-base")
+	}
+
+	return nil
 }

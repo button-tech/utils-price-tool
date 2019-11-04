@@ -34,6 +34,12 @@ type api struct {
 	SupportedChanges []string `json:"supported_changes"`
 }
 
+var supportAPIs = map[string]struct{}{
+	"crc":   {},
+	"cmc":   {},
+	"huobi": {},
+}
+
 func (ac *apiController) getCourses(ctx *routing.Context) error {
 	var req request
 	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
@@ -45,7 +51,10 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 	case "cmc", "crc", "huobi":
 		result, err := ac.converter(&req, a)
 		if err != nil {
-			return err
+			respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+			return nil
 		}
 		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
 			"data": result,
@@ -152,17 +161,15 @@ func changesControl(m map[string]string, s *storage.Details, c string) map[strin
 }
 
 func (ac *apiController) converter(req *request, api string) ([]*response, error) {
-	a := api
-	switch a {
-	case "cmc", "crc", "huobi":
-		resp := ac.mapping(req, a)
-		if resp == nil {
-			return nil, errors.New("no matches API")
-		}
-		return resp, nil
-	default:
+	if _, ok := supportAPIs[api]; !ok {
 		return nil, errors.New("no matches API")
 	}
+
+	resp := ac.mapping(req, api)
+	if resp == nil {
+		return nil, errors.New("no matches support changes API")
+	}
+	return resp, nil
 }
 
 func (s *Server) initCoursesAPI() {

@@ -62,3 +62,13 @@ type huobi struct {
 	} `json:"data"`
 	Ts int64 `json:"ts"`
 }
+
+type coinBase []struct {
+	ID             string `json:"id"`
+	BaseCurrency   string `json:"base_currency"`
+	QuoteCurrency  string `json:"quote_currency"`
+}
+
+type coinBaseEachPrice struct {
+	Open        string `json:"open"`
+}

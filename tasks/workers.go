@@ -18,10 +18,9 @@ func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 			got, err := service.GetPricesCMC(token)
 			if err != nil {
 				log.Println(err)
-				return
+			} else {
+				store.Set("cmc", got)
 			}
-			store.Set("cmc", got)
-
 			tWG.Done()
 		}(t, &tokensWG)
 	}
@@ -30,13 +29,18 @@ func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 }
 
 func crcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
-	res := service.GetPricesCRC()
-	store.Set("crc", res)
+	if res := service.GetPricesCRC(); len(res) > 0 {
+		store.Set("crc", res)
+	}
 	wg.Done()
 }
 
 func huobiWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
-	res := service.GetPricesHUOBI()
-	store.Set("huobi", res)
+	res, err := service.GetPricesHUOBI()
+	if err != nil {
+		log.Println(err)
+	} else {
+		store.Set("huobi", res)
+	}
 	wg.Done()
 }
