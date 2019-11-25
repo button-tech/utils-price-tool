@@ -64,11 +64,11 @@ type huobi struct {
 }
 
 type coinBase []struct {
-	ID             string `json:"id"`
-	BaseCurrency   string `json:"base_currency"`
-	QuoteCurrency  string `json:"quote_currency"`
+	ID            string `json:"id"`
+	BaseCurrency  string `json:"base_currency"`
+	QuoteCurrency string `json:"quote_currency"`
 }
 
 type coinBaseEachPrice struct {
-	Open        string `json:"open"`
+	Open string `json:"open"`
 }

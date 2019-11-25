@@ -3,21 +3,22 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/button-tech/utils-price-tool/storage"
-	"github.com/imroc/req"
-	"github.com/pkg/errors"
-	"github.com/valyala/fastjson"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/imroc/req"
+	"github.com/pkg/errors"
+	"github.com/valyala/fastjson"
 )
 
 const (
-	urlHuobi    = "https://api.hbdm.com/api/v1/contract_index"
-	urlTopList  = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
-	urlCRC      = "https://min-api.cryptocompare.com/data/pricemultifull"
+	urlHuobi   = "https://api.hbdm.com/api/v1/contract_index"
+	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
+	urlCRC     = "https://min-api.cryptocompare.com/data/pricemultifull"
 )
 
 var (
@@ -43,7 +44,7 @@ func (s *Service) CreateCMCRequestData() RequestCoinMarketCap {
 	for _, c := range s.list {
 		tokens = append(tokens, Token{
 			Contract: c},
-			)
+		)
 	}
 	tokensOneCurrency.Tokens = tokens
 
@@ -189,7 +190,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 	return m, nil
 }
 
-func (s *Service)crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*cryptoCompare, wg *sync.WaitGroup) {
+func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*cryptoCompare, wg *sync.WaitGroup) {
 	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
@@ -271,7 +272,7 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 }
 
 const (
-	urlCoinBase = "https://api.pro.coinbase.com/products"
+	urlCoinBase          = "https://api.pro.coinbase.com/products"
 	urlCoinBaseEachPrice = "https://api.pro.coinbase.com/products/%s/ticker"
 )
 

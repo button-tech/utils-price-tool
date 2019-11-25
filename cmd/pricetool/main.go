@@ -1,15 +1,17 @@
 package main
 
 import (
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
 	"github.com/button-tech/utils-price-tool/api"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/tasks"
 	"github.com/valyala/fasthttp"
-	"log"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -17,7 +19,11 @@ func main() {
 	go tasks.NewGetGroup(services.New(), store)
 
 	s := api.NewServer(store)
-	server := fasthttp.Server{Handler: s.R.HandleRequest}
+	server := fasthttp.Server{
+		Handler:      s.R.HandleRequest,
+		ReadTimeout:  time.Second * 30,
+		WriteTimeout: time.Second * 30,
+	}
 
 	signalEx := make(chan os.Signal, 1)
 	defer close(signalEx)
@@ -29,7 +35,7 @@ func main() {
 		syscall.SIGQUIT)
 
 	go func() {
-		if err := fasthttp.ListenAndServe(":5000", s.R.HandleRequest); err != nil {
+		if err := server.ListenAndServe(":5000"); err != nil {
 			log.Fatal(err)
 		}
 	}()

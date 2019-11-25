@@ -1,9 +1,10 @@
 package tasks
 
 import (
-	"github.com/button-tech/utils-price-tool/services"
 	"log"
 	"sync"
+
+	"github.com/button-tech/utils-price-tool/services"
 )
 
 type mappingWorker func(wg *sync.WaitGroup, service *services.Service, store setter)

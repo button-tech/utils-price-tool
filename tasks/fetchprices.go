@@ -1,13 +1,14 @@
 package tasks
 
 import (
-	"github.com/button-tech/utils-price-tool/services"
-	"github.com/button-tech/utils-price-tool/slip0044"
-	"github.com/button-tech/utils-price-tool/storage"
 	"log"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/slip0044"
+	"github.com/button-tech/utils-price-tool/storage"
 )
 
 type DuiCont struct {

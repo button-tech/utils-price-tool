@@ -2,11 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"log"
+	"net/http"
+
 	"github.com/button-tech/utils-price-tool/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
-	"log"
-	"net/http"
 )
 
 type Server struct {
