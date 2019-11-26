@@ -2,8 +2,7 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
-	"log"
+	"github.com/button-tech/logger"
 	"os"
 	"strconv"
 	"strings"
@@ -36,21 +35,19 @@ func New() *Service {
 	}
 }
 
-func (s *Service) CreateCMCRequestData() RequestCoinMarketCap {
-	tokensMultiCurrencies := RequestCoinMarketCap{}
-	tokensOneCurrency := TokensWithCurrency{}
-	tokens := make([]Token, 0)
+func (s *Service) CreateCMCRequestData() []TokensWithCurrency {
+	var tokensOneCurrency TokensWithCurrency
+	tokensMultiCurrencies := make([]TokensWithCurrency, len(currencies))
+	tokens := make([]Token, len(s.list))
 
 	for _, c := range s.list {
-		tokens = append(tokens, Token{
-			Contract: c},
-		)
+		tokens = append(tokens, Token{Contract: c})
 	}
 	tokensOneCurrency.Tokens = tokens
 
 	for _, c := range currencies {
 		tokensOneCurrency.Currency = c
-		tokensMultiCurrencies.Tokens = append(tokensMultiCurrencies.Tokens, tokensOneCurrency)
+		tokensMultiCurrencies = append(tokensMultiCurrencies, tokensOneCurrency)
 	}
 
 	return tokensMultiCurrencies
@@ -60,16 +57,16 @@ func (s *Service) CreateCMCRequestData() RequestCoinMarketCap {
 func (s *Service) GetTopList(c map[string]string) error {
 	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
-		return fmt.Errorf("can not make a request: %v", err)
+		return errors.Wrap(err, "getTopList")
 	}
 
 	list := topList{}
 	if err = rq.ToJSON(&list); err != nil {
-		return fmt.Errorf("can not marshal: %v", err)
+		return errors.Wrap(err, "getTopList")
 	}
 
 	if list.Status.ErrorCode != 0 {
-		return fmt.Errorf("bad request: %v", list.Status.ErrorCode)
+		return errors.New("responseErrorCodeNotOk")
 	}
 
 	topListMap := make(map[string]string)
@@ -98,12 +95,12 @@ func storeMapsConstructor() maps {
 func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
 	rq, err := req.Post(urlTrustWallet, req.BodyJSON(tokens))
 	if err != nil {
-		return nil, fmt.Errorf("can not make a request: %v", err)
+		return nil, errors.Wrap(err, "GetPricesCMC")
 	}
 
 	gotPrices := coinMarketCap{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
-		return nil, fmt.Errorf("can not marshal: %v", err)
+		return nil, errors.Wrap(err, "GetPricesCMC")
 	}
 
 	maps := storeMapsConstructor()
@@ -120,7 +117,7 @@ func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 }
 
 func CreateCRCRequestData() []string {
-	sortedCurrencies := make([]string, 0)
+	sortedCurrencies := make([]string, 7)
 
 	n := 0
 	step := 25
@@ -145,13 +142,17 @@ func (s *Service) GetPricesCRC() storage.FiatMap {
 	sortedCurrencies := CreateCRCRequestData()
 	c := make(chan map[string][]*cryptoCompare, len(sortedCurrencies))
 
-	wg := sync.WaitGroup{}
+	var wg sync.WaitGroup
 	for _, tsyms := range sortedCurrencies {
 		wg.Add(1)
 		go s.crcPricesRequest(tsyms, fsyms, c, &wg)
 	}
 	wg.Wait()
+	if len(c) == 0 {
+		return nil
+	}
 	close(c)
+
 	return fiatMapping(c)
 }
 
@@ -159,7 +160,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
 	if err != nil {
-		return nil, fmt.Errorf("can not parseBytes: %v", err)
+		return nil, errors.Wrap(err, "crcFastJson")
 	}
 
 	m := make(map[string][]*cryptoCompare)
@@ -172,7 +173,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 
 				c := cryptoCompare{}
 				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
-					log.Printf("can not unmarshal elem: %v", value.String())
+					logger.Error("o.Visit", err)
 					return
 				}
 
@@ -187,6 +188,10 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 			})
 		}
 	})
+	if len(m) == 0 {
+		return nil, errors.New("o.VisitError")
+	}
+
 	return m, nil
 }
 
@@ -196,13 +201,15 @@ func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*c
 		"tsyms": tsyms,
 	})
 	if err != nil {
-		log.Printf("can not make req: %v", err)
+		logger.Error("crcPricesRequest", err)
+		return
 	}
 
 	byteRq := rq.Bytes()
 	m, err := s.crcFastJson(byteRq)
 	if err != nil {
-		log.Printf("can not do fastJson: %v", err)
+		logger.Error("crcPricesRequest", err)
+		return
 	}
 
 	c <- m
@@ -210,6 +217,9 @@ func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*c
 }
 
 func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
+	if c == nil {
+		return nil
+	}
 	fiatMap := make(storage.FiatMap)
 
 	done := false

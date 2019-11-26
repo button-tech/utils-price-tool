@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"github.com/button-tech/logger"
 	"log"
 	"runtime"
 	"sync"
@@ -47,7 +48,7 @@ func NewGetGroup(service *services.Service, store setter) {
 	for ; true; <-t.C {
 		start := time.Now()
 		if err := service.GetTopList(converted); err != nil {
-			log.Println(err)
+			logger.Error("GetTopList", err)
 			continue
 		}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/button-tech/logger"
 	"log"
 	"os"
 	"os/signal"
@@ -17,6 +18,10 @@ import (
 func main() {
 	store := storage.NewCache()
 	go tasks.NewGetGroup(services.New(), store)
+
+	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
+		log.Fatal(err)
+	}
 
 	s := api.NewServer(store)
 	server := fasthttp.Server{
@@ -36,17 +41,17 @@ func main() {
 
 	go func() {
 		if err := server.ListenAndServe(":5000"); err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 	}()
 	defer func() {
 		if err := server.Shutdown(); err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 	}()
 
 	stop := <-signalEx
-	log.Println("Received", stop)
-	log.Println("Waiting for all jobs to stop")
+	logger.Info("Received", stop)
+	logger.Info("Waiting for all jobs to stop")
 
 }
