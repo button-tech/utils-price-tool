@@ -2,7 +2,6 @@ package services
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/button-tech/logger"
 	"os"
 	"strconv"
@@ -149,11 +148,6 @@ func (s *Service) GetPricesCRC() storage.FiatMap {
 		go s.crcPricesRequest(tsyms, fsyms, c, &wg)
 	}
 	wg.Wait()
-	a := len(c)
-	fmt.Println(a)
-	//if len(c) == 0 {
-	//	return nil
-	//}
 	close(c)
 
 	return fiatMapping(c)
