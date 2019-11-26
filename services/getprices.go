@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/button-tech/logger"
 	"os"
 	"strconv"
@@ -148,9 +149,11 @@ func (s *Service) GetPricesCRC() storage.FiatMap {
 		go s.crcPricesRequest(tsyms, fsyms, c, &wg)
 	}
 	wg.Wait()
-	if len(c) == 0 {
-		return nil
-	}
+	a := len(c)
+	fmt.Println(a)
+	//if len(c) == 0 {
+	//	return nil
+	//}
 	close(c)
 
 	return fiatMapping(c)
@@ -171,7 +174,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 			crypto := v.GetObject()
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
 
-				c := cryptoCompare{}
+				var c cryptoCompare
 				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
 					logger.Error("o.Visit", err)
 					return
@@ -188,9 +191,6 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 			})
 		}
 	})
-	if len(m) == 0 {
-		return nil, errors.New("o.VisitError")
-	}
 
 	return m, nil
 }
@@ -213,7 +213,7 @@ func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*c
 	}
 
 	c <- m
-	wg.Done()
+	defer wg.Done()
 }
 
 func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {

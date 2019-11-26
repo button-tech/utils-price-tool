@@ -4,13 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/button-tech/logger"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/button-tech/utils-price-tool/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
+	"strings"
+	"sync"
 )
 
 type request struct {
@@ -52,8 +50,6 @@ var supportAPIs = map[string]struct{}{
 }
 
 func (ac *apiController) getCourses(ctx *routing.Context) error {
-	start := time.Now()
-
 	var req request
 	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
 		logger.Error("getCourses", err, logger.Params{
@@ -78,7 +74,6 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
 			"data": result,
 		})
-		logger.LogRequest(time.Since(start), a, "getCourses", false)
 		return nil
 
 	default:
@@ -100,14 +95,11 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 			"api":   API,
 			"error": "please, use these API",
 		})
-		logger.LogRequest(time.Since(start), "unsupportedAPI", "getCourses", false)
 		return nil
 	}
 }
 
 func (ac *apiController) apiInfo(ctx *routing.Context) error {
-	start := time.Now()
-
 	supportedCRC := []string{"0", "1", "24"}
 	crc := api{
 		Name:             "crc",
@@ -131,7 +123,6 @@ func (ac *apiController) apiInfo(ctx *routing.Context) error {
 		"api": API,
 	})
 
-	logger.LogRequest(time.Since(start), "", "apiInfo", false)
 	return nil
 }
 
