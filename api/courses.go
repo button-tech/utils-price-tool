@@ -267,11 +267,11 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 
 	currencies := make([]privateCMC, 0, len(r.Currencies))
 	stored := ac.store.Get()["coinMarketCap"]
-	for _, c := range r.Currencies {
-		currDetail := ac.privateCurrencies[c]
+	for _, symbol := range r.Currencies {
+		currDetail := ac.privateCurrencies[symbol]
 
 		bip := currDetail[0]
-		sybmol := currDetail[1]
+		name := currDetail[1]
 
 		val := stored[storage.Fiat("USD")]
 		details := val[storage.CryptoCurrency(bip)]
@@ -305,8 +305,8 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 		}
 
 		currencies = append(currencies, privateCMC{
-			Name:   c,
-			Symbol: sybmol,
+			Name:  name ,
+			Symbol: symbol,
 			Quote:  q,
 		})
 	}
