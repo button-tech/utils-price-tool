@@ -17,7 +17,7 @@ import (
 
 func main() {
 	store := storage.NewCache()
-	go tasks.NewGetGroup(services.New(), store)
+	go tasks.NewGetGroup(services.New(store), store)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)

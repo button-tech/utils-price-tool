@@ -92,3 +92,4 @@ type realCoinMarketCap struct {
 		} `json:"quote"`
 	} `json:"data"`
 }
+

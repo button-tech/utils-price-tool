@@ -2,13 +2,15 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/storage"
-	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 	"strings"
 	"sync"
+	"strconv"
+	"github.com/pkg/errors"
+	"fmt"
 )
 
 type request struct {
@@ -28,6 +30,26 @@ type uniqueRequest struct {
 type response struct {
 	Currency string              `json:"currency"`
 	Rates    []map[string]string `json:"rates"`
+}
+
+type privateCMC struct {
+	Name   string `json:"name"`
+	Symbol string `json:"symbol"`
+	Quote  quote `json:"quote"`
+}
+
+type quote struct {
+	USD usd
+}
+
+type usd struct {
+	Price            float64 `json:"price"`
+	PercentChange24H float64 `json:"percent_change_24h"`
+	PercentChange7D  float64 `json:"percent_change_7d"`
+}
+
+type privateInputCurrencies struct {
+	Currencies []string `json:"currencies"`
 }
 
 //type listApi struct {
@@ -222,7 +244,110 @@ func unique(req *request) *uniqueRequest {
 	}
 }
 
+func privateCurrencies() map[string][]string {
+	return map[string][]string{
+		"BTC": []string{"0x0000000000000000000000000000000000000000", "Bitcoin"},
+		"ETH": []string{"0x000000000000000000000000000000000000003c", "Ethereum"},
+		"ETC": []string{"0x000000000000000000000000000000000000003d", "Ethereum Classic"},
+		"BCH": []string{"0x0000000000000000000000000000000000000091", "Bitcoin Cash"},
+		"LTC": []string{"0x0000000000000000000000000000000000000002", "Litecoin"},
+		"XLM": []string{"0x0000000000000000000000000000000000000094", "Stellar"},
+		"WAVES": []string{"0x0000000000000000000000000000000000579bfc", "Waves"},
+	}
+
+}
+
+func (ac *apiController) privatePrices(ctx *routing.Context) error {
+	var r privateInputCurrencies
+	if err := json.Unmarshal(ctx.PostBody(), &r); err != nil {
+		logger.Error("privatePrices", err)
+		respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{"err": "can't unmarshal body"})
+		return nil
+	}
+
+	currencies := make([]privateCMC, 0, len(r.Currencies))
+	stored := ac.store.Get()["coinMarketCap"]
+	fmt.Println(r)
+	for _, c := range r.Currencies {
+		currDetail := ac.privateCurrencies[c]
+		fmt.Println(currDetail)
+
+		bip := currDetail[0]
+		sybmol := currDetail[1]
+
+		val := stored[storage.Fiat("USD")]
+		details := val[storage.CryptoCurrency(bip)]
+		priceInfo, err := coinMarketPricesInfo(details.Price, details.ChangePCT24Hour, details.ChangePCT7Day)
+		if err != nil {
+			return errors.Wrap(err, "privatePrices")
+		}
+
+		//a := privateCMC{
+		//	Name: c,
+		//	Symbol: sybmol,
+		//	Quote: struct {
+		//		USD struct {
+		//			Price            float64 `json:"price"`;
+		//			PercentChange24H float64 `json:"percent_change_24h"`;
+		//			PercentChange7D  float64 `json:"percent_change_7d"`
+		//		}
+		//	}{USD: struct {
+		//		Price:
+		//	}{}}
+		//}
+
+		u := usd{
+			Price: priceInfo.price,
+			PercentChange24H: priceInfo.change24Hour,
+			PercentChange7D: priceInfo.change7Day,
+		}
+
+		q := quote{
+			USD: u,
+		}
+
+		currencies = append(currencies, privateCMC{
+			Name: c,
+			Symbol: sybmol,
+			Quote: q,
+		})
+	}
+
+	respondWithJSON(ctx, 200, map[string]interface{}{"data": &currencies})
+	return nil
+}
+
+type coinMarketPrices struct {
+	price float64
+	change24Hour float64
+	change7Day float64
+}
+
+func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, error) {
+	convPrice, err := strconv.ParseFloat(price, 10)
+	if err != nil {
+		return nil, errors.Wrap(err, "priceConversion")
+	}
+
+	change24Hour, err := strconv.ParseFloat(hour24, 10)
+	if err != nil {
+		return nil, errors.Wrap(err, "change24HourConversion")
+	}
+
+	change7Day, err := strconv.ParseFloat(sevenDay, 10)
+	if err != nil {
+		return nil, errors.Wrap(err, "priceConversion")
+	}
+
+	return &coinMarketPrices{
+		price: convPrice,
+		change24Hour: change24Hour,
+		change7Day: change7Day,
+	}, nil
+}
+
 func (s *Server) initCoursesAPI() {
 	s.G.Post("/prices", s.ac.getCourses)
+	s.G.Post("/test", s.ac.privatePrices)
 	s.G.Get("/list", s.ac.apiInfo)
 }

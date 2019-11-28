@@ -17,6 +17,7 @@ type Server struct {
 	G     *routing.RouteGroup
 	ac    *apiController
 	store getter
+	privateCurrencies map[string][]string
 }
 
 type getter interface {
@@ -27,6 +28,7 @@ func NewServer(store *storage.Cache) *Server {
 	server := Server{
 		R:     routing.New(),
 		store: store,
+		privateCurrencies: privateCurrencies(),
 	}
 	server.fs()
 	server.R.Use(cors)
@@ -46,7 +48,7 @@ func (s *Server) fs() {
 
 func (s *Server) initBaseRoute() {
 	s.G = s.R.Group("/courses/v1")
-	s.ac = &apiController{store: s.store}
+	s.ac = &apiController{store: s.store, privateCurrencies: s.privateCurrencies}
 }
 
 func cors(ctx *routing.Context) error {
@@ -83,6 +85,7 @@ func cors(ctx *routing.Context) error {
 }
 
 type apiController struct {
+	privateCurrencies map[string][]string
 	store getter
 }
 

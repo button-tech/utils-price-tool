@@ -26,12 +26,14 @@ var (
 )
 
 type Service struct {
+	store *storage.Cache
 	list map[string]string
 }
 
-func New() *Service {
+func New(store *storage.Cache) *Service {
 	return &Service{
 		list: make(map[string]string),
+		store: store,
 	}
 }
 
@@ -75,27 +77,61 @@ func (s *Service) GetTopList(c map[string]string) error {
 	for _, item := range topList.Data {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[item.Symbol] = val
-			ms.PriceMap[storage.CryptoCurrency(item.Symbol)] = &storage.Details{
-				Price:           item.Quote.USD.Price
-				ChangePCTHour:   "",
-				ChangePCT24Hour: "",
-			}
+
+			pricesData := coinMarketPricesInfo(
+				item.Quote.USD.Price,
+				item.Quote.USD.PercentChange1H,
+				item.Quote.USD.PercentChange24H,
+				item.Quote.USD.PercentChange7D,
+				)
+			ms.PriceMap[storage.CryptoCurrency(val)] = pricesData
 		}
 	}
-	s.list = topListMap
 
+	ms.FiatMap[storage.Fiat("USD")] = ms.PriceMap
+	s.store.Set(storage.Api("coinMarketCap"), ms.FiatMap)
+	s.list = topListMap
 
 	return nil
 }
 
-type coinMarketPrices struct {
-	price float64
-	changePCTHour float64
-	changePCT24Hour float64
-	changePCT7Day float64
+func coinMarketPricesInfo(price, hour, hour24, sevenDay float64) *storage.Details {
+	return &storage.Details{
+		Price: strconv.FormatFloat(price, 'f', 10, 64),
+		ChangePCTHour: strconv.FormatFloat(hour, 'f', 6, 64),
+		ChangePCT24Hour: strconv.FormatFloat(hour24, 'f', 6, 64),
+		ChangePCT7Day: strconv.FormatFloat(sevenDay, 'f', 6, 64),
+	}
 }
 
-func coinMarketPricesInfo()
+//func coinMarketPricesInfo(price, hour, hour24, sevenDay string) (*coinMarketPrices, error) {
+//	convPrice, err := strconv.ParseFloat(price, 10)
+//	if err != nil {
+//		return nil, errors.Wrap(err, "priceConversion")
+//	}
+//
+//	changeHour, err := strconv.ParseFloat(hour, 10)
+//	if err != nil {
+//		return nil, errors.Wrap(err, "priceConversion")
+//	}
+//
+//	change24Hour, err := strconv.ParseFloat(hour24, 10)
+//	if err != nil {
+//		return nil, errors.Wrap(err, "change24HourConversion")
+//	}
+//
+//	change7Day, err := strconv.ParseFloat(sevenDay, 10)
+//	if err != nil {
+//		return nil, errors.Wrap(err, "priceConversion")
+//	}
+//
+//	return &coinMarketPrices{
+//		price: convPrice,
+//		changePCTHour: changeHour,
+//		changePCT24Hour: change24Hour,
+//		changePCT7Day: change7Day,
+//	}, nil
+//}
 
 type maps struct {
 	FiatMap  storage.FiatMap
