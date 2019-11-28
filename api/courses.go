@@ -10,7 +10,6 @@ import (
 	"sync"
 	"strconv"
 	"github.com/pkg/errors"
-	"fmt"
 )
 
 type request struct {
@@ -267,10 +266,8 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 
 	currencies := make([]privateCMC, 0, len(r.Currencies))
 	stored := ac.store.Get()["coinMarketCap"]
-	fmt.Println(r)
 	for _, c := range r.Currencies {
 		currDetail := ac.privateCurrencies[c]
-		fmt.Println(currDetail)
 
 		bip := currDetail[0]
 		sybmol := currDetail[1]
