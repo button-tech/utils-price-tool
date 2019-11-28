@@ -2,14 +2,15 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/button-tech/logger"
-	"github.com/button-tech/utils-price-tool/storage"
-	"github.com/qiangxue/fasthttp-routing"
-	"github.com/valyala/fasthttp"
+	"strconv"
 	"strings"
 	"sync"
-	"strconv"
+
+	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/pkg/errors"
+	"github.com/qiangxue/fasthttp-routing"
+	"github.com/valyala/fasthttp"
 )
 
 type request struct {
@@ -34,7 +35,7 @@ type response struct {
 type privateCMC struct {
 	Name   string `json:"name"`
 	Symbol string `json:"symbol"`
-	Quote  quote `json:"quote"`
+	Quote  quote  `json:"quote"`
 }
 
 type quote struct {
@@ -245,12 +246,12 @@ func unique(req *request) *uniqueRequest {
 
 func privateCurrencies() map[string][]string {
 	return map[string][]string{
-		"BTC": []string{"0x0000000000000000000000000000000000000000", "Bitcoin"},
-		"ETH": []string{"0x000000000000000000000000000000000000003c", "Ethereum"},
-		"ETC": []string{"0x000000000000000000000000000000000000003d", "Ethereum Classic"},
-		"BCH": []string{"0x0000000000000000000000000000000000000091", "Bitcoin Cash"},
-		"LTC": []string{"0x0000000000000000000000000000000000000002", "Litecoin"},
-		"XLM": []string{"0x0000000000000000000000000000000000000094", "Stellar"},
+		"BTC":   []string{"0x0000000000000000000000000000000000000000", "Bitcoin"},
+		"ETH":   []string{"0x000000000000000000000000000000000000003c", "Ethereum"},
+		"ETC":   []string{"0x000000000000000000000000000000000000003d", "Ethereum Classic"},
+		"BCH":   []string{"0x0000000000000000000000000000000000000091", "Bitcoin Cash"},
+		"LTC":   []string{"0x0000000000000000000000000000000000000002", "Litecoin"},
+		"XLM":   []string{"0x0000000000000000000000000000000000000094", "Stellar"},
 		"WAVES": []string{"0x0000000000000000000000000000000000579bfc", "Waves"},
 	}
 
@@ -294,9 +295,9 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 		//}
 
 		u := usd{
-			Price: priceInfo.price,
+			Price:            priceInfo.price,
 			PercentChange24H: priceInfo.change24Hour,
-			PercentChange7D: priceInfo.change7Day,
+			PercentChange7D:  priceInfo.change7Day,
 		}
 
 		q := quote{
@@ -304,9 +305,9 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 		}
 
 		currencies = append(currencies, privateCMC{
-			Name: c,
+			Name:   c,
 			Symbol: sybmol,
-			Quote: q,
+			Quote:  q,
 		})
 	}
 
@@ -315,9 +316,9 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 }
 
 type coinMarketPrices struct {
-	price float64
+	price        float64
 	change24Hour float64
-	change7Day float64
+	change7Day   float64
 }
 
 func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, error) {
@@ -337,14 +338,14 @@ func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, er
 	}
 
 	return &coinMarketPrices{
-		price: convPrice,
+		price:        convPrice,
 		change24Hour: change24Hour,
-		change7Day: change7Day,
+		change7Day:   change7Day,
 	}, nil
 }
 
 func (s *Server) initCoursesAPI() {
 	s.G.Post("/prices", s.ac.getCourses)
-	s.G.Post("/test", s.ac.privatePrices)
+	s.G.Post("/change", s.ac.privatePrices)
 	s.G.Get("/list", s.ac.apiInfo)
 }

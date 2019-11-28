@@ -12,11 +12,11 @@ import (
 )
 
 type Server struct {
-	Core  *fasthttp.Server
-	R     *routing.Router
-	G     *routing.RouteGroup
-	ac    *apiController
-	store getter
+	Core              *fasthttp.Server
+	R                 *routing.Router
+	G                 *routing.RouteGroup
+	ac                *apiController
+	store             getter
 	privateCurrencies map[string][]string
 }
 
@@ -26,8 +26,8 @@ type getter interface {
 
 func NewServer(store *storage.Cache) *Server {
 	server := Server{
-		R:     routing.New(),
-		store: store,
+		R:                 routing.New(),
+		store:             store,
 		privateCurrencies: privateCurrencies(),
 	}
 	server.fs()
@@ -86,7 +86,7 @@ func cors(ctx *routing.Context) error {
 
 type apiController struct {
 	privateCurrencies map[string][]string
-	store getter
+	store             getter
 }
 
 func respondWithJSON(ctx *routing.Context, code int, payload map[string]interface{}) {
