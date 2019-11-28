@@ -16,6 +16,7 @@ type Details struct {
 	Price           string
 	ChangePCTHour   string
 	ChangePCT24Hour string
+	ChangePCT7Day   string
 }
 
 type Cache struct {

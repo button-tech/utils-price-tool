@@ -72,3 +72,23 @@ type coinBase []struct {
 type coinBaseEachPrice struct {
 	Open string `json:"open"`
 }
+
+type realCoinMarketCap struct {
+	Status struct {
+		ErrorCode    int         `json:"error_code"`
+		ErrorMessage interface{} `json:"error_message"`
+	} `json:"status"`
+	Data []struct {
+		ID     int    `json:"id"`
+		Name   string `json:"name"`
+		Symbol string `json:"symbol"`
+		Quote  struct {
+			USD struct {
+				Price            float64 `json:"price"`
+				PercentChange1H  float64 `json:"percent_change_1h"`
+				PercentChange24H float64 `json:"percent_change_24h"`
+				PercentChange7D  float64 `json:"percent_change_7d"`
+			} `json:"USD"`
+		} `json:"quote"`
+	} `json:"data"`
+}

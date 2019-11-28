@@ -60,25 +60,42 @@ func (s *Service) GetTopList(c map[string]string) error {
 		return errors.Wrap(err, "getTopList")
 	}
 
-	list := topList{}
-	if err = rq.ToJSON(&list); err != nil {
+	var topList realCoinMarketCap
+	if err = rq.ToJSON(&topList); err != nil {
 		return errors.Wrap(err, "getTopList")
 	}
 
-	if list.Status.ErrorCode != 0 {
+	if topList.Status.ErrorCode != 0 {
 		return errors.New("responseErrorCodeNotOk")
 	}
 
+	ms := storeMapsConstructor()
+
 	topListMap := make(map[string]string)
-	for _, item := range list.Data {
+	for _, item := range topList.Data {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[item.Symbol] = val
+			ms.PriceMap[storage.CryptoCurrency(item.Symbol)] = &storage.Details{
+				Price:           item.Quote.USD.Price
+				ChangePCTHour:   "",
+				ChangePCT24Hour: "",
+			}
 		}
 	}
-
 	s.list = topListMap
+
+
 	return nil
 }
+
+type coinMarketPrices struct {
+	price float64
+	changePCTHour float64
+	changePCT24Hour float64
+	changePCT7Day float64
+}
+
+func coinMarketPricesInfo()
 
 type maps struct {
 	FiatMap  storage.FiatMap
@@ -294,3 +311,4 @@ func (s *Service) GetPricesCoinBase() error {
 
 	return nil
 }
+

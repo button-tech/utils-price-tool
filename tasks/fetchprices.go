@@ -57,7 +57,7 @@ func NewGetGroup(service *services.Service, store setter) {
 			go worker(&wg, service, store)
 		}
 
-		logger.Info("Count goroutines: %v", runtime.NumGoroutine())
+		logger.Info("Count goroutines: ", runtime.NumGoroutine())
 		wg.Wait()
 
 		end := time.Since(start)
