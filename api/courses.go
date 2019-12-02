@@ -58,22 +58,6 @@ type privateInputCurrencies struct {
 	Currencies []string `json:"currencies"`
 }
 
-type trustRequestV2 struct {
-	Currency string `json:"currency"`
-	Assets   []struct {
-		Coin int    `json:"coin"`
-		Type string `json:"type"`
-	} `json:"assets"`
-}
-
-//type listApi struct {
-//	API []api `json:"api"`
-//	//Time             struct {
-//	//	Start int `json:"start"`
-//	//	End   int `json:"end"`
-//	//} `json:"time"`
-//}
-
 type api struct {
 	Name             string   `json:"name"`
 	SupportedChanges []string `json:"supported_changes"`
