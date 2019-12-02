@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"github.com/button-tech/logger"
-	"log"
 	"runtime"
 	"sync"
 	"time"
@@ -29,22 +28,20 @@ type setter interface {
 
 //Pool of workers
 func NewGetGroup(service *services.Service, store setter) {
-	t := time.NewTicker(time.Minute * 7)
-
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
-		log.Println(err)
+		logger.Error("AddTrustHexBySlip", err)
 		return
 	}
 
-	wg := sync.WaitGroup{}
-
+	var wg sync.WaitGroup
 	workList := []mappingWorker{
 		cmcWorker,
 		crcWorker,
 		huobiWorker,
 	}
 
+	t := time.NewTicker(time.Minute * 7)
 	for ; true; <-t.C {
 		start := time.Now()
 		if err := service.GetTopList(converted); err != nil {

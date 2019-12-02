@@ -52,3 +52,13 @@ func huobiWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 	store.Set("huobi", res)
 	defer wg.Done()
 }
+
+//func trustV2Worker(wg *sync.WaitGroup, service services.Service, store setter) {
+//	var inWG sync.WaitGroup
+//	for _, v := range service.TrustV2Coins {
+//		inWG.Add(1)
+//		go func() {
+//
+//		}()
+//	}
+//}

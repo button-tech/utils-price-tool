@@ -20,14 +20,18 @@ const (
 	urlCRC     = "https://min-api.cryptocompare.com/data/pricemultifull"
 )
 
+const coin = "coin"
+
 var (
-	urlTrustWallet = os.Getenv("TRUST_URL")
-	topListAPIKey  = os.Getenv("API_KEY")
+	urlTrustWallet   = os.Getenv("TRUST_URL")
+	topListAPIKey    = os.Getenv("API_KEY")
+	urlTrustWalletV2 = os.Getenv("TRUST_URL_v2")
 )
 
 type Service struct {
-	store *storage.Cache
-	list  map[string]string
+	TrustV2Coins []pricesTrustV2
+	store        *storage.Cache
+	list         map[string]string
 }
 
 type maps struct {
@@ -35,11 +39,83 @@ type maps struct {
 	PriceMap map[storage.CryptoCurrency]*storage.Details
 }
 
+var trustV2Coins = map[string]int{
+	"ETH":   60,
+	"ETC":   61,
+	"ICX":   74,
+	"ATOM":  118,
+	"XRP":   144,
+	"XLM":   148,
+	"POA":   178,
+	"TRX":   195,
+	"FIO":   235,
+	"NIM":   242,
+	"IOTX":  304,
+	"ZIL":   313,
+	"AION":  425,
+	"AE":    457,
+	"THETA": 500,
+	"BNB":   714,
+	"VET":   818,
+	"CLO":   820,
+	"TOMO":  889,
+	"TT":    1001,
+	"ONT":   1024,
+	"XTZ":   1729,
+	"KIN":   2017,
+	"NAS":   2718,
+	"GO":    6060,
+	"WAN":   5718350,
+	"WAVES": 5741564,
+	"SEM":   7562605,
+	"BTC":   0,
+	"LTC":   2,
+	"DOGE":  3,
+	"DASH":  5,
+	"VIA":   14,
+	"GRS":   17,
+	"ZEC":   133,
+	"XZC":   136,
+	"BCH":   145,
+	"RVN":   175,
+	"QTUM":  2301,
+	"ZEL":   19167,
+	"DCR":   42,
+	"ALGO":  283,
+	"NANO":  165,
+	"DGB":   20,
+}
+
 func New(store *storage.Cache) *Service {
 	return &Service{
-		list:  make(map[string]string),
-		store: store,
+		TrustV2Coins: CreateTrustV2RequestData(),
+		list:         make(map[string]string),
+		store:        store,
 	}
+}
+
+type t struct {
+	S string
+	C []string
+}
+
+func CreateTrustV2RequestData() []pricesTrustV2 {
+	prices := make([]pricesTrustV2, 0, len(currencies))
+	for _, c := range currencies {
+		price := pricesTrustV2{
+			Currency: c,
+		}
+		allAssets := make([]assets, 0, len(trustV2Coins))
+		for _, v := range trustV2Coins {
+			allAssets = append(allAssets, assets{
+				Coin: v,
+				Type: coin,
+			})
+		}
+		price.Assets = allAssets
+		prices = append(prices, price)
+	}
+	return prices
 }
 
 func (s *Service) CreateCMCRequestData() []TokensWithCurrency {
@@ -319,3 +395,13 @@ func (s *Service) GetPricesCoinBase() error {
 	return nil
 }
 */
+
+//func (s *Service) GetPricesTrustV2(prices pricesTrustV2) (storage.FiatMap, error) {
+//	rq := req.New()
+//	resp, err := rq.Post(urlTrustWalletV2, req.BodyJSON(&prices))
+//	if err != nil {
+//		return nil, errors.Wrap(err, "GetPricesTrustV2")
+//	}
+//
+//
+//}

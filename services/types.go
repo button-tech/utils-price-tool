@@ -93,3 +93,12 @@ type realCoinMarketCap struct {
 	} `json:"data"`
 }
 
+type pricesTrustV2 struct {
+	Currency string   `json:"currency"`
+	Assets   []assets `json:"assets"`
+}
+
+type assets struct {
+	Coin int    `json:"coin"`
+	Type string `json:"type"`
+}

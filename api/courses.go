@@ -13,6 +13,53 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+const (
+	ETH   = 60
+	ETC   = 61
+	ICX   = 74
+	ATOM  = 118
+	XRP   = 144
+	XLM   = 148
+	POA   = 178
+	TRX   = 195
+	FIO   = 235
+	NIM   = 242
+	IOTX  = 304
+	ZIL   = 313
+	AION  = 425
+	AE    = 457
+	THETA = 500
+	BNB   = 714
+	VET   = 818
+	CLO   = 820
+	TOMO  = 889
+	TT    = 1001
+	ONT   = 1024
+	XTZ   = 1729
+	KIN   = 2017
+	NAS   = 2718
+	GO    = 6060
+	WAN   = 5718350
+	WAVES = 5741564
+	SEM   = 7562605
+	BTC   = 0
+	LTC   = 2
+	DOGE  = 3
+	DASH  = 5
+	VIA   = 14
+	GRS   = 17
+	ZEC   = 133
+	XZC   = 136
+	BCH   = 145
+	RVN   = 175
+	QTUM  = 2301
+	ZEL   = 19167
+	DCR   = 42
+	ALGO  = 283
+	NANO  = 165
+	DGB   = 20
+)
+
 type request struct {
 	Tokens     []string `json:"tokens"`
 	Currencies []string `json:"currencies"`
@@ -56,6 +103,14 @@ type usd struct {
 
 type privateInputCurrencies struct {
 	Currencies []string `json:"currencies"`
+}
+
+type trustRequestV2 struct {
+	Currency string `json:"currency"`
+	Assets   []struct {
+		Coin int    `json:"coin"`
+		Type string `json:"type"`
+	} `json:"assets"`
 }
 
 //type listApi struct {
@@ -252,15 +307,14 @@ func unique(req *request) *uniqueRequest {
 
 func privateCurrencies() map[string][]string {
 	return map[string][]string{
-		"BTC":   []string{"0x0000000000000000000000000000000000000000", "Bitcoin"},
-		"ETH":   []string{"0x000000000000000000000000000000000000003c", "Ethereum"},
-		"ETC":   []string{"0x000000000000000000000000000000000000003d", "Ethereum Classic"},
-		"BCH":   []string{"0x0000000000000000000000000000000000000091", "Bitcoin Cash"},
-		"LTC":   []string{"0x0000000000000000000000000000000000000002", "Litecoin"},
-		"XLM":   []string{"0x0000000000000000000000000000000000000094", "Stellar"},
-		"WAVES": []string{"0x0000000000000000000000000000000000579bfc", "Waves"},
+		"BTC":   {"0x0000000000000000000000000000000000000000", "Bitcoin"},
+		"ETH":   {"0x000000000000000000000000000000000000003c", "Ethereum"},
+		"ETC":   {"0x000000000000000000000000000000000000003d", "Ethereum Classic"},
+		"BCH":   {"0x0000000000000000000000000000000000000091", "Bitcoin Cash"},
+		"LTC":   {"0x0000000000000000000000000000000000000002", "Litecoin"},
+		"XLM":   {"0x0000000000000000000000000000000000000094", "Stellar"},
+		"WAVES": {"0x0000000000000000000000000000000000579bfc", "Waves"},
 	}
-
 }
 
 func (ac *apiController) privatePrices(ctx *routing.Context) error {
@@ -330,7 +384,22 @@ func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, er
 }
 
 func (s *Server) initCoursesAPI() {
-	s.G.Post("/prices", s.ac.getCourses)
-	s.G.Post("/change", s.ac.privatePrices)
-	s.G.Get("/list", s.ac.apiInfo)
+	controller := apiController{
+		privateCurrencies: s.privateCurrencies,
+		store:             s.store,
+	}
+
+	s.G.Post("/prices", controller.getCourses)
+	s.G.Post("/change", controller.privatePrices)
+	s.G.Get("/list", controller.apiInfo)
+}
+
+//func (ac *apiController) getCoursesV2(ctx *routing.Context) error {
+//
+//}
+
+func (s *Server) initCoursesAPIv2() {
+	controller := apiController{}
+	s.Gv2.Post("/prices", controller.getCourses)
+
 }

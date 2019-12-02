@@ -15,9 +15,14 @@ type Server struct {
 	Core              *fasthttp.Server
 	R                 *routing.Router
 	G                 *routing.RouteGroup
-	ac                *apiController
+	Gv2               *routing.RouteGroup
 	store             getter
 	privateCurrencies map[string][]string
+}
+
+type apiController struct {
+	privateCurrencies map[string][]string
+	store             getter
 }
 
 type getter interface {
@@ -48,7 +53,7 @@ func (s *Server) fs() {
 
 func (s *Server) initBaseRoute() {
 	s.G = s.R.Group("/courses/v1")
-	s.ac = &apiController{store: s.store, privateCurrencies: s.privateCurrencies}
+	s.Gv2 = s.R.Group("/courses/v2")
 }
 
 func cors(ctx *routing.Context) error {
@@ -82,11 +87,6 @@ func cors(ctx *routing.Context) error {
 		ctx.SetBody(b)
 	}
 	return nil
-}
-
-type apiController struct {
-	privateCurrencies map[string][]string
-	store             getter
 }
 
 func respondWithJSON(ctx *routing.Context, code int, payload map[string]interface{}) {
