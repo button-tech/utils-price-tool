@@ -399,7 +399,3 @@ func trustV2FiatMap(r *trustV2Response) storage.FiatMap {
 
 	return m
 }
-
-func GetPricesCRCV2() {
-
-}

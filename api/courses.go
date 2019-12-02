@@ -131,7 +131,7 @@ func (s *Server) initCoursesAPIv2() {
 	controller := apiController{
 		store: s.store,
 	}
-	s.Gv2.Post("/prices", controller.getCourses)
+	s.Gv2.Post("/prices", controller.getCoursesV2)
 	s.Gv2.Get("/info", controller.getInfoV2)
 }
 
@@ -146,7 +146,7 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 
 	a := req.API
 	switch a {
-	case "cmc", "crc", "huobi", "ntrust":
+	case "cmc", "crc", "huobi":
 		result, err := ac.converter(&req, a)
 		if err != nil {
 			respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
@@ -212,8 +212,9 @@ func (ac *apiController) apiInfo(ctx *routing.Context) error {
 	return nil
 }
 
-func (ac *apiController) mapping(req *uniqueRequest, api string) []*response {
-	result := make([]*response, 0)
+func (ac *apiController) mapping(req *uniqueRequest) []*response {
+	result := make([]*response, 0, len(req.currencies))
+	api := req.api
 	stored := ac.store.Get()[storage.Api(api)]
 	if stored == nil {
 		return nil
@@ -221,23 +222,16 @@ func (ac *apiController) mapping(req *uniqueRequest, api string) []*response {
 
 	for c := range req.currencies {
 		price := response{}
-
 		if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
 			price.Currency = c
 			for t := range req.tokens {
-				var currency storage.CryptoCurrency
-				if api == "ntrust" {
-					currency = storage.CryptoCurrency(t)
-				} else {
-					currency = storage.CryptoCurrency(strings.ToLower(t))
-				}
+				currency := storageCC(req.api, t)
 				if val, ok := fiatVal[currency]; ok {
 					contract := map[string]string{t: val.Price}
 					if contract = changesControl(contract, val, req.change); len(contract) == 0 {
 						return nil
-					} else {
-						price.Rates = append(price.Rates, contract)
 					}
+					price.Rates = append(price.Rates, contract)
 				}
 			}
 		}
@@ -246,6 +240,16 @@ func (ac *apiController) mapping(req *uniqueRequest, api string) []*response {
 		}
 	}
 	return result
+}
+
+func storageCC(api, t string) storage.CryptoCurrency {
+	var c storage.CryptoCurrency
+	if api == "ntrust" {
+		c = storage.CryptoCurrency(t)
+	} else {
+		c = storage.CryptoCurrency(strings.ToLower(t))
+	}
+	return c
 }
 
 func changesControl(m map[string]string, s *storage.Details, c string) map[string]string {
@@ -272,7 +276,8 @@ func (ac *apiController) converter(req *request, api string) ([]*response, error
 		return nil, errors.New("no matches API")
 	}
 
-	resp := ac.mapping(unique(req), api)
+	u := unique(req)
+	resp := ac.mapping(u)
 	if resp == nil {
 		return nil, errors.New("no matches support changes API")
 	}
@@ -394,4 +399,47 @@ func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, er
 func (ac *apiController) getInfoV2(ctx *routing.Context) error {
 	respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"support": trustV2Coins})
 	return nil
+}
+
+func (ac *apiController) getCoursesV2(ctx *routing.Context) error {
+	var req request
+	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
+		logger.Error("getCourses", err, logger.Params{
+			"from": "json.Unmarshal",
+		})
+		return err
+	}
+
+	a := req.API
+	switch a {
+	case "ntrust":
+		result, err := ac.converter(&req, a)
+		if err != nil {
+			respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
+				"error": err.Error(),
+			})
+			logger.Error("getCourses", err.Error(), logger.Params{
+				"from": "ac.converter",
+			})
+			return nil
+		}
+		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
+			"data": result,
+		})
+	default:
+		supported := v2SupportedInfo()
+		respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
+			"api":   supported,
+			"error": "please, use these API",
+		})
+	}
+	return nil
+}
+
+func v2SupportedInfo() api {
+	supportedNewTrust := []string{"0", "24"}
+	return api{
+		Name:             "ntrust",
+		SupportedChanges: supportedNewTrust,
+	}
 }
