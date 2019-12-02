@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -394,12 +395,15 @@ func (s *Server) initCoursesAPI() {
 	s.G.Get("/list", controller.apiInfo)
 }
 
-//func (ac *apiController) getCoursesV2(ctx *routing.Context) error {
-//
-//}
+func (ac *apiController) getCoursesV2(ctx *routing.Context) error {
+	return nil
+}
 
 func (s *Server) initCoursesAPIv2() {
-	controller := apiController{}
-	s.Gv2.Post("/prices", controller.getCourses)
+	controller := apiController{
+		store: s.store,
+	}
+
+	s.Gv2.Post("/prices", controller.getCoursesV2)
 
 }

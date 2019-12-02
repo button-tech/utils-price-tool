@@ -25,11 +25,11 @@ const coin = "coin"
 var (
 	urlTrustWallet   = os.Getenv("TRUST_URL")
 	topListAPIKey    = os.Getenv("API_KEY")
-	urlTrustWalletV2 = os.Getenv("TRUST_URL_v2")
+	urlTrustWalletV2 = os.Getenv("TRUST_URL_V2")
 )
 
 type Service struct {
-	TrustV2Coins []pricesTrustV2
+	TrustV2Coins []PricesTrustV2
 	store        *storage.Cache
 	list         map[string]string
 }
@@ -94,15 +94,10 @@ func New(store *storage.Cache) *Service {
 	}
 }
 
-type t struct {
-	S string
-	C []string
-}
-
-func CreateTrustV2RequestData() []pricesTrustV2 {
-	prices := make([]pricesTrustV2, 0, len(currencies))
+func CreateTrustV2RequestData() []PricesTrustV2 {
+	prices := make([]PricesTrustV2, 0, len(currencies))
 	for _, c := range currencies {
-		price := pricesTrustV2{
+		price := PricesTrustV2{
 			Currency: c,
 		}
 		allAssets := make([]assets, 0, len(trustV2Coins))
@@ -158,13 +153,13 @@ func (s *Service) GetTopList(c map[string]string) error {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[item.Symbol] = val
 
-			pricesData := coinMarketPricesInfo(
+			pricesData := storageDetails(
 				item.Quote.USD.Price,
 				item.Quote.USD.PercentChange1H,
 				item.Quote.USD.PercentChange24H,
 				item.Quote.USD.PercentChange7D,
 			)
-			ms.PriceMap[storage.CryptoCurrency(val)] = pricesData
+			ms.PriceMap[storage.CryptoCurrency(val)] = &pricesData
 		}
 	}
 
@@ -175,8 +170,8 @@ func (s *Service) GetTopList(c map[string]string) error {
 	return nil
 }
 
-func coinMarketPricesInfo(price, hour, hour24, sevenDay float64) *storage.Details {
-	return &storage.Details{
+func storageDetails(price, hour, hour24, sevenDay float64) storage.Details {
+	return storage.Details{
 		Price:           strconv.FormatFloat(price, 'f', 10, 64),
 		ChangePCTHour:   strconv.FormatFloat(hour, 'f', 6, 64),
 		ChangePCT24Hour: strconv.FormatFloat(hour24, 'f', 6, 64),
@@ -374,34 +369,32 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 	return fiatMap
 }
 
-/*
-const (
-	urlCoinBase          = "https://api.pro.coinbase.com/products"
-	urlCoinBaseEachPrice = "https://api.pro.coinbase.com/products/%s/ticker"
-)
-
-// In Progress
-func (s *Service) GetPricesCoinBase() error {
-	rq, err := req.Get(urlCoinBase)
+func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (storage.FiatMap, error) {
+	rq := req.New()
+	resp, err := rq.Post(urlTrustWalletV2, req.BodyJSON(&prices))
 	if err != nil {
-		return errors.Wrap(err, "coin-base request")
+		return nil, errors.Wrap(err, "GetPricesTrustV2")
 	}
 
-	var c coinBase
-	if err := rq.ToJSON(&c); err != nil {
-		return errors.Wrap(err, "toJSON coin-base")
+	var r trustV2Response
+	if err := resp.ToJSON(&r); err != nil {
+		return nil, errors.Wrap(err, "GetPricesTrustV2toJSON")
 	}
 
-	return nil
+	m := trustV2FiatMap(&r)
+	return m, nil
 }
-*/
 
-//func (s *Service) GetPricesTrustV2(prices pricesTrustV2) (storage.FiatMap, error) {
-//	rq := req.New()
-//	resp, err := rq.Post(urlTrustWalletV2, req.BodyJSON(&prices))
-//	if err != nil {
-//		return nil, errors.Wrap(err, "GetPricesTrustV2")
-//	}
-//
-//
-//}
+func trustV2FiatMap(r *trustV2Response) storage.FiatMap {
+	m := make(storage.FiatMap)
+	currency := storage.Fiat(r.Currency)
+	m[currency] = map[storage.CryptoCurrency]*storage.Details{}
+	for _, doc := range r.Docs {
+		coin := storage.CryptoCurrency(strconv.Itoa(doc.Coin))
+
+		sd := storageDetails(doc.Price.Value, 0, doc.Price.Change24H, 0)
+		m[currency][coin] = &sd
+	}
+
+	return m
+}

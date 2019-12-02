@@ -39,6 +39,7 @@ func NewServer(store *storage.Cache) *Server {
 	server.R.Use(cors)
 	server.initBaseRoute()
 	server.initCoursesAPI()
+	server.initCoursesAPIv2()
 
 	return &server
 }

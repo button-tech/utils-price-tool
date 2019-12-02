@@ -63,16 +63,6 @@ type huobi struct {
 	Ts int64 `json:"ts"`
 }
 
-type coinBase []struct {
-	ID            string `json:"id"`
-	BaseCurrency  string `json:"base_currency"`
-	QuoteCurrency string `json:"quote_currency"`
-}
-
-type coinBaseEachPrice struct {
-	Open string `json:"open"`
-}
-
 type realCoinMarketCap struct {
 	Status struct {
 		ErrorCode    int         `json:"error_code"`
@@ -93,7 +83,7 @@ type realCoinMarketCap struct {
 	} `json:"data"`
 }
 
-type pricesTrustV2 struct {
+type PricesTrustV2 struct {
 	Currency string   `json:"currency"`
 	Assets   []assets `json:"assets"`
 }
@@ -101,4 +91,17 @@ type pricesTrustV2 struct {
 type assets struct {
 	Coin int    `json:"coin"`
 	Type string `json:"type"`
+}
+
+type trustV2Response struct {
+	Currency string `json:"currency"`
+	Docs     []struct {
+		Coin  int    `json:"coin"`
+		Type  string `json:"type"`
+		Price struct {
+			Value     float64 `json:"value"`
+			Change24H float64 `json:"change_24h"`
+		} `json:"price"`
+		LastUpdate time.Time `json:"last_update"`
+	} `json:"docs"`
 }

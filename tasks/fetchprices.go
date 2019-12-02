@@ -39,6 +39,7 @@ func NewGetGroup(service *services.Service, store setter) {
 		cmcWorker,
 		crcWorker,
 		huobiWorker,
+		trustV2Worker,
 	}
 
 	t := time.NewTicker(time.Minute * 7)

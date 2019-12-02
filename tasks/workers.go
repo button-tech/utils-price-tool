@@ -1,11 +1,11 @@
 package tasks
 
 import (
-	"github.com/button-tech/logger"
-	"github.com/pkg/errors"
 	"sync"
 
+	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/services"
+	"github.com/pkg/errors"
 )
 
 type mappingWorker func(wg *sync.WaitGroup, service *services.Service, store setter)
@@ -53,12 +53,20 @@ func huobiWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 	defer wg.Done()
 }
 
-//func trustV2Worker(wg *sync.WaitGroup, service services.Service, store setter) {
-//	var inWG sync.WaitGroup
-//	for _, v := range service.TrustV2Coins {
-//		inWG.Add(1)
-//		go func() {
-//
-//		}()
-//	}
-//}
+func trustV2Worker(wg *sync.WaitGroup, service *services.Service, store setter) {
+	var inWG sync.WaitGroup
+	for _, v := range service.TrustV2Coins {
+		inWG.Add(1)
+		go func(inWg *sync.WaitGroup, price services.PricesTrustV2) {
+			got, err := service.GetPricesTrustV2(price)
+			if err != nil {
+				logger.Error("trustV2Worker", err)
+				return
+			}
+			store.Set("ntrust", got)
+			defer inWG.Done()
+		}(&inWG, v)
+	}
+	inWG.Wait()
+	wg.Done()
+}
