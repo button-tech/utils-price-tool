@@ -30,8 +30,9 @@ var (
 
 type Service struct {
 	TrustV2Coins []PricesTrustV2
-	store        *storage.Cache
-	list         map[string]string
+
+	store *storage.Cache
+	list  map[string]string
 }
 
 type maps struct {
@@ -397,4 +398,8 @@ func trustV2FiatMap(r *trustV2Response) storage.FiatMap {
 	}
 
 	return m
+}
+
+func GetPricesCRCV2() {
+
 }

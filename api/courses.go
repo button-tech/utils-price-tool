@@ -86,6 +86,71 @@ var supportAPIs = map[string]struct{}{
 	"ntrust": {},
 }
 
+var trustV2Coins = map[string]int{
+	"ETH":   60,
+	"ETC":   61,
+	"ICX":   74,
+	"ATOM":  118,
+	"XRP":   144,
+	"XLM":   148,
+	"POA":   178,
+	"TRX":   195,
+	"FIO":   235,
+	"NIM":   242,
+	"IOTX":  304,
+	"ZIL":   313,
+	"AION":  425,
+	"AE":    457,
+	"THETA": 500,
+	"BNB":   714,
+	"VET":   818,
+	"CLO":   820,
+	"TOMO":  889,
+	"TT":    1001,
+	"ONT":   1024,
+	"XTZ":   1729,
+	"KIN":   2017,
+	"NAS":   2718,
+	"GO":    6060,
+	"WAN":   5718350,
+	"WAVES": 5741564,
+	"SEM":   7562605,
+	"BTC":   0,
+	"LTC":   2,
+	"DOGE":  3,
+	"DASH":  5,
+	"VIA":   14,
+	"GRS":   17,
+	"ZEC":   133,
+	"XZC":   136,
+	"BCH":   145,
+	"RVN":   175,
+	"QTUM":  2301,
+	"ZEL":   19167,
+	"DCR":   42,
+	"ALGO":  283,
+	"NANO":  165,
+	"DGB":   20,
+}
+
+func (s *Server) initCoursesAPI() {
+	controller := apiController{
+		privateCurrencies: s.privateCurrencies,
+		store:             s.store,
+	}
+	s.G.Post("/prices", controller.getCourses)
+	s.G.Post("/change", controller.privatePrices)
+	s.G.Get("/list", controller.apiInfo)
+}
+
+func (s *Server) initCoursesAPIv2() {
+	controller := apiController{
+		store: s.store,
+	}
+	s.Gv2.Post("/prices", controller.getCourses)
+	s.Gv2.Get("/info", controller.getInfoV2)
+}
+
 func (ac *apiController) getCourses(ctx *routing.Context) error {
 	var req request
 	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
@@ -342,72 +407,7 @@ func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, er
 	}, nil
 }
 
-func (s *Server) initCoursesAPI() {
-	controller := apiController{
-		privateCurrencies: s.privateCurrencies,
-		store:             s.store,
-	}
-
-	s.G.Post("/prices", controller.getCourses)
-	s.G.Post("/change", controller.privatePrices)
-	s.G.Get("/list", controller.apiInfo)
-}
-
-func (ac *apiController) getCoursesV2(ctx *routing.Context) error {
-	var req request
-	if err := json.Unmarshal(ctx.PostBody(), &req); err != nil {
-		logger.Error("getCourses", err, logger.Params{
-			"from": "json.Unmarshal",
-		})
-		return err
-	}
-
-	a := req.API
-	switch a {
-	case "ntrust":
-		result, err := ac.converter(&req, a)
-		if err != nil {
-			respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
-				"error": err.Error(),
-			})
-			logger.Error("getCourses", err.Error(), logger.Params{
-				"from": "ac.converter",
-			})
-			return nil
-		}
-		respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{
-			"data": result,
-		})
-		return nil
-
-	default:
-		supportedCRC := []string{"0", "1", "24"}
-		crc := api{
-			Name:             "crc",
-			SupportedChanges: supportedCRC,
-		}
-
-		supportedCMC := []string{"24"}
-		cmc := api{
-			Name:             "cmc",
-			SupportedChanges: supportedCMC,
-		}
-
-		API := []api{crc, cmc}
-
-		respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
-			"api":   API,
-			"error": "please, use these API",
-		})
-		return nil
-	}
-}
-
-func (s *Server) initCoursesAPIv2() {
-	controller := apiController{
-		store: s.store,
-	}
-
-	s.Gv2.Post("/prices", controller.getCourses)
-
+func (ac *apiController) getInfoV2(ctx *routing.Context) error {
+	respondWithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"support": trustV2Coins})
+	return nil
 }
