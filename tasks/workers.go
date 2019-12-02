@@ -20,10 +20,10 @@ func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 			got, err := service.GetPricesCMC(token)
 			if err != nil {
 				logger.Error("cmcWorker", err)
-			} else {
-				store.Set("cmc", got)
+				return
 			}
-			tWG.Done()
+			store.Set("cmc", got)
+			defer tWG.Done()
 		}(t, &tokensWG)
 	}
 	tokensWG.Wait()
@@ -47,8 +47,8 @@ func huobiWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 	res, err := service.GetPricesHUOBI()
 	if err != nil {
 		logger.Error("huobiWorker", err)
-	} else {
-		store.Set("huobi", res)
+		return
 	}
-	wg.Done()
+	store.Set("huobi", res)
+	defer wg.Done()
 }

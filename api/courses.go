@@ -38,6 +38,12 @@ type privateCMC struct {
 	Quote  quote  `json:"quote"`
 }
 
+type coinMarketPrices struct {
+	price        float64
+	change24Hour float64
+	change7Day   float64
+}
+
 type quote struct {
 	USD usd
 }
@@ -280,32 +286,9 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 			return errors.Wrap(err, "privatePrices")
 		}
 
-		//a := privateCMC{
-		//	Name: c,
-		//	Symbol: sybmol,
-		//	Quote: struct {
-		//		USD struct {
-		//			Price            float64 `json:"price"`;
-		//			PercentChange24H float64 `json:"percent_change_24h"`;
-		//			PercentChange7D  float64 `json:"percent_change_7d"`
-		//		}
-		//	}{USD: struct {
-		//		Price:
-		//	}{}}
-		//}
-
-		u := usd{
-			Price:            priceInfo.price,
-			PercentChange24H: priceInfo.change24Hour,
-			PercentChange7D:  priceInfo.change7Day,
-		}
-
-		q := quote{
-			USD: u,
-		}
-
+		q := priceQuote(priceInfo)
 		currencies = append(currencies, privateCMC{
-			Name:  name ,
+			Name:   name,
 			Symbol: symbol,
 			Quote:  q,
 		})
@@ -315,10 +298,12 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 	return nil
 }
 
-type coinMarketPrices struct {
-	price        float64
-	change24Hour float64
-	change7Day   float64
+func priceQuote(info *coinMarketPrices) quote {
+	return quote{USD: usd{
+		Price:            info.price,
+		PercentChange24H: info.change24Hour,
+		PercentChange7D:  info.change7Day,
+	}}
 }
 
 func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, error) {
@@ -334,7 +319,7 @@ func coinMarketPricesInfo(price, hour24, sevenDay string) (*coinMarketPrices, er
 
 	change7Day, err := strconv.ParseFloat(sevenDay, 10)
 	if err != nil {
-		return nil, errors.Wrap(err, "priceConversion")
+		return nil, errors.Wrap(err, "change7DayConversion")
 	}
 
 	return &coinMarketPrices{

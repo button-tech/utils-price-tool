@@ -27,12 +27,17 @@ var (
 
 type Service struct {
 	store *storage.Cache
-	list map[string]string
+	list  map[string]string
+}
+
+type maps struct {
+	FiatMap  storage.FiatMap
+	PriceMap map[storage.CryptoCurrency]*storage.Details
 }
 
 func New(store *storage.Cache) *Service {
 	return &Service{
-		list: make(map[string]string),
+		list:  make(map[string]string),
 		store: store,
 	}
 }
@@ -72,7 +77,6 @@ func (s *Service) GetTopList(c map[string]string) error {
 	}
 
 	ms := storeMapsConstructor()
-
 	topListMap := make(map[string]string)
 	for _, item := range topList.Data {
 		if val, ok := c[item.Symbol]; ok {
@@ -83,13 +87,13 @@ func (s *Service) GetTopList(c map[string]string) error {
 				item.Quote.USD.PercentChange1H,
 				item.Quote.USD.PercentChange24H,
 				item.Quote.USD.PercentChange7D,
-				)
+			)
 			ms.PriceMap[storage.CryptoCurrency(val)] = pricesData
 		}
 	}
 
 	ms.FiatMap[storage.Fiat("USD")] = ms.PriceMap
-	s.store.Set(storage.Api("coinMarketCap"), ms.FiatMap)
+	s.store.Set("coinMarketCap", ms.FiatMap)
 	s.list = topListMap
 
 	return nil
@@ -97,45 +101,11 @@ func (s *Service) GetTopList(c map[string]string) error {
 
 func coinMarketPricesInfo(price, hour, hour24, sevenDay float64) *storage.Details {
 	return &storage.Details{
-		Price: strconv.FormatFloat(price, 'f', 10, 64),
-		ChangePCTHour: strconv.FormatFloat(hour, 'f', 6, 64),
+		Price:           strconv.FormatFloat(price, 'f', 10, 64),
+		ChangePCTHour:   strconv.FormatFloat(hour, 'f', 6, 64),
 		ChangePCT24Hour: strconv.FormatFloat(hour24, 'f', 6, 64),
-		ChangePCT7Day: strconv.FormatFloat(sevenDay, 'f', 6, 64),
+		ChangePCT7Day:   strconv.FormatFloat(sevenDay, 'f', 6, 64),
 	}
-}
-
-//func coinMarketPricesInfo(price, hour, hour24, sevenDay string) (*coinMarketPrices, error) {
-//	convPrice, err := strconv.ParseFloat(price, 10)
-//	if err != nil {
-//		return nil, errors.Wrap(err, "priceConversion")
-//	}
-//
-//	changeHour, err := strconv.ParseFloat(hour, 10)
-//	if err != nil {
-//		return nil, errors.Wrap(err, "priceConversion")
-//	}
-//
-//	change24Hour, err := strconv.ParseFloat(hour24, 10)
-//	if err != nil {
-//		return nil, errors.Wrap(err, "change24HourConversion")
-//	}
-//
-//	change7Day, err := strconv.ParseFloat(sevenDay, 10)
-//	if err != nil {
-//		return nil, errors.Wrap(err, "priceConversion")
-//	}
-//
-//	return &coinMarketPrices{
-//		price: convPrice,
-//		changePCTHour: changeHour,
-//		changePCT24Hour: change24Hour,
-//		changePCT7Day: change7Day,
-//	}, nil
-//}
-
-type maps struct {
-	FiatMap  storage.FiatMap
-	PriceMap map[storage.CryptoCurrency]*storage.Details
 }
 
 func storeMapsConstructor() maps {
@@ -328,6 +298,7 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 	return fiatMap
 }
 
+/*
 const (
 	urlCoinBase          = "https://api.pro.coinbase.com/products"
 	urlCoinBaseEachPrice = "https://api.pro.coinbase.com/products/%s/ticker"
@@ -347,4 +318,4 @@ func (s *Service) GetPricesCoinBase() error {
 
 	return nil
 }
-
+*/
