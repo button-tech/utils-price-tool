@@ -244,7 +244,7 @@ func (ac *apiController) mapping(req *uniqueRequest) ([]response, error) {
 }
 
 func tokenToStorageCC(api, t string) (c storage.CryptoCurrency) {
-	if api == "ntrust" || api == "crc" {
+	if api == "ntrust" {
 		c = typeconv.StorageCC(t)
 		return
 	}

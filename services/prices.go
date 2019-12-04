@@ -222,8 +222,7 @@ func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 }
 
 func CreateCRCRequestData() []string {
-	sortedCurrencies := make([]string, 7)
-
+	sortedCurrencies := make([]string, 0, 7)
 	n := 0
 	step := 25
 	for i := 0; i < 6; i++ {
