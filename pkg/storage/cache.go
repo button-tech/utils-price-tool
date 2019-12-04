@@ -1,11 +1,14 @@
 package storage
 
 import (
+	"errors"
 	"sync"
 )
 
 type Api string
+
 type CryptoCurrency string
+
 type Fiat string
 
 type FiatMap map[Fiat]map[CryptoCurrency]*Details
@@ -44,9 +47,12 @@ func (c *Cache) Set(a Api, f FiatMap) {
 	c.Unlock()
 }
 
-func (c *Cache) Get() (s Stored) {
+func (c *Cache) Get(a Api) (f FiatMap, err error) {
 	c.RLock()
-	s = c.items
+	f = c.items[a]
+	if f == nil {
+		err = errors.New("cache: nil")
+	}
 	c.RUnlock()
 	return
 }
