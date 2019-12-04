@@ -7,7 +7,8 @@ import (
 	"sync"
 
 	"github.com/button-tech/logger"
-	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/pkg/storage"
+	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"github.com/pkg/errors"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
@@ -147,7 +148,7 @@ func (ac *apiController) getCourses(ctx *routing.Context) error {
 	a := req.API
 	switch a {
 	case "cmc", "crc", "huobi":
-		result, err := ac.converter(&req, a)
+		result, err := ac.converter(&req)
 		if err != nil {
 			respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
 				"error": err.Error(),
@@ -212,76 +213,70 @@ func (ac *apiController) apiInfo(ctx *routing.Context) error {
 	return nil
 }
 
-func (ac *apiController) mapping(req *uniqueRequest) []*response {
-	result := make([]*response, 0, len(req.currencies))
+func (ac *apiController) mapping(req *uniqueRequest) ([]response, error) {
+	result := make([]response, 0, len(req.currencies))
 	api := req.api
-	stored := ac.store.Get()[storage.Api(api)]
-	if stored == nil {
-		return nil
+	stored, err := ac.store.Get(typeconv.StorageApi(api))
+	if err != nil {
+		return nil, err
 	}
 
 	for c := range req.currencies {
 		price := response{}
-		if fiatVal, fiatOk := stored[storage.Fiat(c)]; fiatOk {
+		if fiatVal, fiatOk := stored[typeconv.StorageFiat(c)]; fiatOk {
 			price.Currency = c
 			for t := range req.tokens {
-				currency := storageCC(req.api, t)
-				if val, ok := fiatVal[currency]; ok {
-					contract := map[string]string{t: val.Price}
-					if contract = changesControl(contract, val, req.change); len(contract) == 0 {
-						return nil
+				currency := tokenToStorageCC(req.api, t)
+				if details, ok := fiatVal[currency]; ok {
+					contract := map[string]string{t: details.Price}
+					if err := changesControl(contract, details, req.change); err != nil {
+						return nil, err
 					}
 					price.Rates = append(price.Rates, contract)
 				}
 			}
 		}
 		if price.Currency != "" {
-			result = append(result, &price)
+			result = append(result, price)
 		}
 	}
-	return result
+	return result, nil
 }
 
-func storageCC(api, t string) storage.CryptoCurrency {
-	var c storage.CryptoCurrency
-	if api == "ntrust" {
-		c = storage.CryptoCurrency(t)
-	} else {
-		c = storage.CryptoCurrency(strings.ToLower(t))
+func tokenToStorageCC(api, t string) (c storage.CryptoCurrency) {
+	if api == "ntrust" || api == "crc" {
+		c = typeconv.StorageCC(t)
+		return
 	}
-	return c
+	c = typeconv.StorageCC(strings.ToLower(t))
+	return
 }
 
-func changesControl(m map[string]string, s *storage.Details, c string) map[string]string {
+func changesControl(m map[string]string, d *storage.Details, c string) error {
 	switch c {
 	case "1":
-		if s.ChangePCTHour != "" {
-			m["percent_change"] = s.ChangePCTHour
-			return m
+		if d.ChangePCTHour != "" {
+			m["percent_change"] = d.ChangePCTHour
+			return nil
 		}
-		return nil
 	case "24":
-		if s.ChangePCT24Hour != "" {
-			m["percent_change"] = s.ChangePCT24Hour
-			return m
+		if d.ChangePCT24Hour != "" {
+			m["percent_change"] = d.ChangePCT24Hour
+			return nil
 		}
-		return nil
 	default:
-		return m
+		return nil
 	}
+	return errors.New("API changes: no matches")
 }
 
-func (ac *apiController) converter(req *request, api string) ([]*response, error) {
+func (ac *apiController) converter(req *request) ([]response, error) {
+	api := req.API
 	if _, ok := supportAPIs[api]; !ok {
-		return nil, errors.New("no matches API")
+		return nil, errors.New("API: no matches")
 	}
-
 	u := unique(req)
-	resp := ac.mapping(u)
-	if resp == nil {
-		return nil, errors.New("no matches support changes API")
-	}
-	return resp, nil
+	return ac.mapping(u)
 }
 
 func unique(req *request) *uniqueRequest {
@@ -339,15 +334,18 @@ func (ac *apiController) privatePrices(ctx *routing.Context) error {
 	}
 
 	currencies := make([]privateCMC, 0, len(r.Currencies))
-	stored := ac.store.Get()["coinMarketCap"]
+	stored, err := ac.store.Get(typeconv.StorageApi("coinMarketCap"))
+	if err != nil {
+		return errors.Wrap(err, "privatePrices")
+	}
 	for _, symbol := range r.Currencies {
 		currDetail := ac.privateCurrencies[symbol]
 
 		bip := currDetail[0]
 		name := currDetail[1]
 
-		val := stored[storage.Fiat("USD")]
-		details := val[storage.CryptoCurrency(bip)]
+		val := stored[typeconv.StorageFiat("USD")]
+		details := val[typeconv.StorageCC(bip)]
 		priceInfo, err := coinMarketPricesInfo(details.Price, details.ChangePCT24Hour, details.ChangePCT7Day)
 		if err != nil {
 			return errors.Wrap(err, "privatePrices")
@@ -413,7 +411,7 @@ func (ac *apiController) getCoursesV2(ctx *routing.Context) error {
 	a := req.API
 	switch a {
 	case "ntrust":
-		result, err := ac.converter(&req, a)
+		result, err := ac.converter(&req)
 		if err != nil {
 			respondWithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{
 				"error": err.Error(),

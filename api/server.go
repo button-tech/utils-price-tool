@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/utils-price-tool/pkg/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -26,7 +26,7 @@ type apiController struct {
 }
 
 type getter interface {
-	Get() (s storage.Stored)
+	Get(a storage.Api) (f storage.FiatMap, err error)
 }
 
 func NewServer(store *storage.Cache) *Server {
