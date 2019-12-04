@@ -1,14 +1,60 @@
 package tasks
 
 import (
+	"runtime"
 	"sync"
+	"time"
 
 	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/pkg/slip0044"
+	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/pkg/errors"
 )
 
-type mappingWorker func(wg *sync.WaitGroup, service *services.Service, store setter)
+type setter interface {
+	Set(a storage.Api, f storage.FiatMap)
+}
+
+type worker func(wg *sync.WaitGroup, service *services.Service, store setter)
+
+func FetchGroup(service *services.Service, store setter) {
+	converted, err := slip0044.AddTrustHexBySlip()
+	if err != nil {
+		logger.Error("AddTrustHexBySlip", err)
+		return
+	}
+
+	var wg sync.WaitGroup
+	ws := workers()
+	t := time.NewTicker(time.Minute * 7)
+	for ; true; <-t.C {
+		start := time.Now()
+		if err := service.GetTopList(converted); err != nil {
+			logger.Error("GetTopList", err)
+			continue
+		}
+
+		for _, worker := range ws {
+			wg.Add(1)
+			go worker(&wg, service, store)
+		}
+
+		logger.Info("Count goroutines: ", runtime.NumGoroutine())
+		wg.Wait()
+
+		end := time.Since(start)
+		logger.Info("Time EXEC:", end)
+	}
+}
+
+func workers() []worker {
+	return []worker{cmcWorker,
+		crcWorker,
+		huobiWorker,
+		trustV2Worker,
+	}
+}
 
 func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 	tokens := service.CreateCMCRequestData()
