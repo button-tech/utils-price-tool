@@ -37,22 +37,6 @@ type cryptoCompare struct {
 	ChangePCTHour   float64 `json:"CHANGEPCTHOUR"`
 }
 
-type topList struct {
-	Status struct {
-		Timestamp    time.Time   `json:"timestamp"`
-		ErrorCode    int         `json:"error_code"`
-		ErrorMessage interface{} `json:"error_message"`
-	} `json:"status"`
-	Data []data `json:"data"`
-}
-
-type data struct {
-	ID     int    `json:"id"`
-	Name   string `json:"name"`
-	Symbol string `json:"symbol"`
-	Slug   string `json:"slug"`
-}
-
 type huobi struct {
 	Status string `json:"status"`
 	Data   []struct {
@@ -63,7 +47,7 @@ type huobi struct {
 	Ts int64 `json:"ts"`
 }
 
-type realCoinMarketCap struct {
+type pureCoinMarketCap struct {
 	Status struct {
 		ErrorCode    int         `json:"error_code"`
 		ErrorMessage interface{} `json:"error_message"`

@@ -2,13 +2,14 @@ package services
 
 import (
 	"encoding/json"
-	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/button-tech/utils-price-tool/storage"
+	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
 	"github.com/valyala/fastjson"
@@ -139,13 +140,13 @@ func (s *Service) GetTopList(c map[string]string) error {
 		return errors.Wrap(err, "getTopList")
 	}
 
-	var topList realCoinMarketCap
+	var topList pureCoinMarketCap
 	if err = rq.ToJSON(&topList); err != nil {
 		return errors.Wrap(err, "getTopList")
 	}
 
 	if topList.Status.ErrorCode != 0 {
-		return errors.New("responseErrorCodeNotOk")
+		return errors.New("responseHTTPStatus: NotOk")
 	}
 
 	ms := storeMapsConstructor()
@@ -154,30 +155,39 @@ func (s *Service) GetTopList(c map[string]string) error {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[item.Symbol] = val
 
-			pricesData := storageDetails(
+			pricesData := detailsConversion(
 				item.Quote.USD.Price,
 				item.Quote.USD.PercentChange1H,
 				item.Quote.USD.PercentChange24H,
 				item.Quote.USD.PercentChange7D,
 			)
-			ms.PriceMap[storage.CryptoCurrency(val)] = &pricesData
+			ms.PriceMap[typeconv.StorageCC(val)] = &pricesData
 		}
 	}
 
-	ms.FiatMap[storage.Fiat("USD")] = ms.PriceMap
+	ms.FiatMap[typeconv.StorageFiat("USD")] = ms.PriceMap
 	s.store.Set("coinMarketCap", ms.FiatMap)
 	s.list = topListMap
 
 	return nil
 }
 
-func storageDetails(price, hour, hour24, sevenDay float64) storage.Details {
-	return storage.Details{
-		Price:           strconv.FormatFloat(price, 'f', 10, 64),
-		ChangePCTHour:   strconv.FormatFloat(hour, 'f', 6, 64),
-		ChangePCT24Hour: strconv.FormatFloat(hour24, 'f', 6, 64),
-		ChangePCT7Day:   strconv.FormatFloat(sevenDay, 'f', 6, 64),
+func detailsConversion(price, hour, hour24, sevenDay float64) storage.Details {
+	d := storage.Details{Price: strconv.FormatFloat(price, 'f', 10, 64)}
+	if floatValid(hour) {
+		d.ChangePCTHour = strconv.FormatFloat(hour, 'f', 6, 64)
 	}
+	if floatValid(hour24) {
+		d.ChangePCT24Hour = strconv.FormatFloat(hour24, 'f', 6, 64)
+	}
+	if floatValid(sevenDay) {
+		d.ChangePCT7Day = strconv.FormatFloat(sevenDay, 'f', 6, 64)
+	}
+	return d
+}
+
+func floatValid(s float64) bool {
+	return s != 0
 }
 
 func storeMapsConstructor() maps {
@@ -204,9 +214,9 @@ func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
-		maps.PriceMap[storage.CryptoCurrency(strings.ToLower(v.Contract))] = &details
+		maps.PriceMap[typeconv.StorageCC(strings.ToLower(v.Contract))] = &details
 	}
-	maps.FiatMap[storage.Fiat(gotPrices.Currency)] = maps.PriceMap
+	maps.FiatMap[typeconv.StorageFiat(gotPrices.Currency)] = maps.PriceMap
 
 	return maps.FiatMap, nil
 }
@@ -235,7 +245,7 @@ func (s *Service) GetPricesCRC() storage.FiatMap {
 	}
 
 	sortedCurrencies := CreateCRCRequestData()
-	c := make(chan map[string][]*cryptoCompare, len(sortedCurrencies))
+	c := make(chan map[string][]cryptoCompare, len(sortedCurrencies))
 
 	var wg sync.WaitGroup
 	for _, tsyms := range sortedCurrencies {
@@ -248,21 +258,20 @@ func (s *Service) GetPricesCRC() storage.FiatMap {
 	return fiatMapping(c)
 }
 
-func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error) {
+func (s *Service) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) {
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
 	if err != nil {
 		return nil, errors.Wrap(err, "crcFastJson")
 	}
 
-	m := make(map[string][]*cryptoCompare)
+	m := make(map[string][]cryptoCompare)
 
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
 		if val, ok := s.list[string(k)]; ok {
 			crypto := v.GetObject()
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
-
 				var c cryptoCompare
 				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
 					logger.Error("o.Visit", err)
@@ -270,12 +279,11 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 				}
 
 				c.FromSymbol = val
-
 				valM, okM := m[c.ToSymbol]
 				if !okM {
-					m[c.ToSymbol] = make([]*cryptoCompare, 0)
+					m[c.ToSymbol] = make([]cryptoCompare, 0)
 				}
-				valM = append(valM, &c)
+				valM = append(valM, c)
 				m[c.ToSymbol] = valM
 			})
 		}
@@ -284,7 +292,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]*cryptoCompare, error
 	return m, nil
 }
 
-func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*cryptoCompare, wg *sync.WaitGroup) {
+func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
 	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
@@ -305,7 +313,7 @@ func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]*c
 	defer wg.Done()
 }
 
-func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
+func fiatMapping(c chan map[string][]cryptoCompare) storage.FiatMap {
 	if c == nil {
 		return nil
 	}
@@ -328,13 +336,13 @@ func fiatMapping(c chan map[string][]*cryptoCompare) storage.FiatMap {
 					details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
 					details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
 
-					priceMap[storage.CryptoCurrency(strings.ToLower(i.FromSymbol))] = &details
+					priceMap[typeconv.StorageCC(strings.ToLower(i.FromSymbol))] = &details
 				}
 
-				if _, ok := fiatMap[storage.Fiat(k)]; !ok {
-					fiatMap[storage.Fiat(k)] = map[storage.CryptoCurrency]*storage.Details{}
+				if _, ok := fiatMap[typeconv.StorageFiat(k)]; !ok {
+					fiatMap[typeconv.StorageFiat(k)] = map[storage.CryptoCurrency]*storage.Details{}
 				}
-				fiatMap[storage.Fiat(k)] = priceMap
+				fiatMap[typeconv.StorageFiat(k)] = priceMap
 			}
 		}
 	}
@@ -363,8 +371,8 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 		if val, ok := list[i.Symbol]; ok {
 			var details storage.Details
 			details.Price = strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
-			priceMap[storage.CryptoCurrency(strings.ToLower(val))] = &details
-			fiatMap[storage.Fiat("USD")] = priceMap
+			priceMap[typeconv.StorageCC(strings.ToLower(val))] = &details
+			fiatMap[typeconv.StorageFiat("USD")] = priceMap
 		}
 	}
 	return fiatMap
@@ -388,12 +396,12 @@ func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (storage.FiatMap, error
 
 func trustV2FiatMap(r *trustV2Response) storage.FiatMap {
 	m := make(storage.FiatMap)
-	currency := storage.Fiat(r.Currency)
+	currency := typeconv.StorageFiat(r.Currency)
 	m[currency] = map[storage.CryptoCurrency]*storage.Details{}
 	for _, doc := range r.Docs {
-		coin := storage.CryptoCurrency(strconv.Itoa(doc.Coin))
+		coin := typeconv.StorageCC(strconv.Itoa(doc.Coin))
 
-		sd := storageDetails(doc.Price.Value, 0, doc.Price.Change24H, 0)
+		sd := detailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
 		m[currency][coin] = &sd
 	}
 
