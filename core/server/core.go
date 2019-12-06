@@ -5,6 +5,7 @@ import (
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	v1 "github.com/button-tech/utils-price-tool/core/v1"
+	v2 "github.com/button-tech/utils-price-tool/core/v2"
 	"github.com/button-tech/utils-price-tool/pkg/storage"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
@@ -28,7 +29,9 @@ func New(store *storage.Cache) (c *Core) {
 	c.R.Use(cors)
 	c.initBaseRoute()
 	c.fs()
+
 	v1.API(c.G, &v1.Provider{Store: c.store})
+	v2.API(c.Gv2, &v2.Provider{Store: c.store})
 	return
 }
 

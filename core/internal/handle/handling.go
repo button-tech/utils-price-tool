@@ -97,6 +97,7 @@ func mapping(u *UniqueData, f FiatMap) ([]response, error) {
 
 func changesControl(m map[string]string, d *storage.Details, c string) error {
 	switch c {
+	case "0", "":
 	case "1":
 		if d.ChangePCTHour != "" {
 			m["percent_change"] = d.ChangePCTHour
