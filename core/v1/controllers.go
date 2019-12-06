@@ -47,8 +47,8 @@ func (c *controller) courses(ctx *routing.Context) error {
 	var r handle.Data
 	if err := json.Unmarshal(ctx.PostBody(), &r); err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
-			API:     "v1",
-			Func:    "courses",
+			API:     v1,
+			Func:    funcName,
 			Err:     err,
 			Payload: respond.Payload("request", "json.Unmarshal"),
 		}, nil)
