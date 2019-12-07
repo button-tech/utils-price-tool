@@ -2,12 +2,12 @@ package v1
 
 import (
 	"encoding/json"
-	"github.com/button-tech/utils-price-tool/pkg/typeconv"
-	"github.com/pkg/errors"
 	"strconv"
 
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
+	"github.com/button-tech/utils-price-tool/pkg/typeconv"
+	"github.com/pkg/errors"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -56,7 +56,7 @@ func (c *controller) courses(ctx *routing.Context) error {
 	}
 
 	unique := handle.Unify(&r)
-	resp, err := handle.Reply(&unique, v1, c.store)
+	resp, err := handle.Reply(&unique, v1, c.store, c.getPrices)
 	if err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v1,
@@ -119,6 +119,23 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": currencies})
 	return nil
 }
+
+//func (c *controller) tokens(ctx *routing.Context) error {
+//	const funcName = "tokens"
+//	var r handle.Data
+//	if err := json.Unmarshal(ctx.PostBody(), &r); err != nil {
+//		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
+//			API:     v1,
+//			Func:    funcName,
+//			Err:     err,
+//			Payload: respond.Payload("request", "json.Unmarshal"),
+//		}, nil)
+//		return nil
+//	}
+//
+//	unique := handle.Unify(&r)
+//
+//}
 
 func supportInfo() []handle.APIs {
 	supportedCRC := []string{"0", "1", "24"}

@@ -22,7 +22,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	c := core.New(store)
+	c := core.New(store, getPrices)
 	signalEx := make(chan os.Signal, 1)
 	defer close(signalEx)
 

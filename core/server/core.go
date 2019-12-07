@@ -7,6 +7,7 @@ import (
 	v1 "github.com/button-tech/utils-price-tool/core/v1"
 	v2 "github.com/button-tech/utils-price-tool/core/v2"
 	"github.com/button-tech/utils-price-tool/pkg/storage"
+	"github.com/button-tech/utils-price-tool/services"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 	"time"
@@ -18,19 +19,21 @@ type Core struct {
 	G   *routing.RouteGroup
 	Gv2 *routing.RouteGroup
 
-	store *storage.Cache
+	service *services.Service
+	store   *storage.Cache
 }
 
-func New(store *storage.Cache) (c *Core) {
+func New(store *storage.Cache, service *services.Service) (c *Core) {
 	c = &Core{
-		R:     routing.New(),
-		store: store,
+		R:       routing.New(),
+		store:   store,
+		service: service,
 	}
 	c.R.Use(cors)
 	c.initBaseRoute()
 	c.fs()
 
-	v1.API(c.G, &v1.Provider{Store: c.store})
+	v1.API(c.G, &v1.Provider{Store: c.store, GetPrices: c.service})
 	v2.API(c.Gv2, &v2.Provider{Store: c.store})
 	return
 }

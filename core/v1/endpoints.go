@@ -2,15 +2,18 @@ package v1
 
 import (
 	"github.com/button-tech/utils-price-tool/pkg/storage"
+	"github.com/button-tech/utils-price-tool/services"
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
 type Provider struct {
 	Store             *storage.Cache
+	GetPrices         *services.Service
 	privateCurrencies map[string][]string
 }
 
 type controller struct {
+	getPrices         *services.Service
 	store             *storage.Cache
 	privateCurrencies map[string][]string
 }
@@ -18,6 +21,7 @@ type controller struct {
 func API(g *routing.RouteGroup, p *Provider) {
 	c := controller{
 		store:             p.Store,
+		getPrices:         p.GetPrices,
 		privateCurrencies: privateCurrencies(),
 	}
 
