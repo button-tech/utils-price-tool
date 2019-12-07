@@ -6,7 +6,7 @@ import (
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	v1 "github.com/button-tech/utils-price-tool/core/v1"
 	v2 "github.com/button-tech/utils-price-tool/core/v2"
-	"github.com/button-tech/utils-price-tool/pkg/storage"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/services"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
@@ -20,10 +20,10 @@ type Core struct {
 	Gv2 *routing.RouteGroup
 
 	service *services.Service
-	store   *storage.Cache
+	store   *cache.Cache
 }
 
-func New(store *storage.Cache, service *services.Service) (c *Core) {
+func New(store *cache.Cache, service *services.Service) (c *Core) {
 	c = &Core{
 		R:       routing.New(),
 		store:   store,

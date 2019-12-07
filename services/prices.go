@@ -2,6 +2,7 @@ package services
 
 import (
 	"encoding/json"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"os"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/button-tech/logger"
-	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
 	"github.com/valyala/fastjson"
@@ -35,12 +35,12 @@ type Service struct {
 	List         map[string]string
 	Tokens       map[string]string
 
-	store *storage.Cache
+	store *cache.Cache
 }
 
 type maps struct {
-	FiatMap  storage.FiatMap
-	PriceMap map[storage.CryptoCurrency]*storage.Details
+	FiatMap  cache.FiatMap
+	PriceMap map[cache.CryptoCurrency]*cache.Details
 }
 
 var trustV2Coins = map[string]int{
@@ -90,7 +90,7 @@ var trustV2Coins = map[string]int{
 	"DGB":   20,
 }
 
-func New(store *storage.Cache) *Service {
+func New(store *cache.Cache) *Service {
 	return &Service{
 		TrustV2Coins: CreateTrustV2RequestData(),
 		List:         make(map[string]string),
@@ -173,8 +173,8 @@ func (s *Service) GetTopList(c map[string]string) error {
 	return nil
 }
 
-func detailsConversion(price, hour, hour24, sevenDay float64) storage.Details {
-	d := storage.Details{Price: strconv.FormatFloat(price, 'f', 10, 64)}
+func detailsConversion(price, hour, hour24, sevenDay float64) cache.Details {
+	d := cache.Details{Price: strconv.FormatFloat(price, 'f', 10, 64)}
 	if floatValid(hour) {
 		d.ChangePCTHour = strconv.FormatFloat(hour, 'f', 6, 64)
 	}
@@ -193,12 +193,12 @@ func floatValid(s float64) bool {
 
 func storeMapsConstructor() maps {
 	return maps{
-		FiatMap:  make(storage.FiatMap),
-		PriceMap: make(map[storage.CryptoCurrency]*storage.Details),
+		FiatMap:  make(cache.FiatMap),
+		PriceMap: make(map[cache.CryptoCurrency]*cache.Details),
 	}
 }
 
-func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
+func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (cache.FiatMap, error) {
 	rq, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
 		return nil, errors.Wrap(err, "GetPricesCMC")
@@ -211,7 +211,7 @@ func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, erro
 
 	maps := storeMapsConstructor()
 	for _, v := range gotPrices.Docs {
-		details := storage.Details{}
+		details := cache.Details{}
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
@@ -238,7 +238,7 @@ func CreateCRCRequestData() []string {
 	return sortedCurrencies
 }
 
-func (s *Service) GetPricesCRC() storage.FiatMap {
+func (s *Service) GetPricesCRC() cache.FiatMap {
 	var fsyms string
 	for k := range s.List {
 		fsyms += k + ","
@@ -313,11 +313,11 @@ func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cr
 	defer wg.Done()
 }
 
-func fiatMapping(c chan map[string][]cryptoCompare) storage.FiatMap {
+func fiatMapping(c chan map[string][]cryptoCompare) cache.FiatMap {
 	if c == nil {
 		return nil
 	}
-	fiatMap := make(storage.FiatMap)
+	fiatMap := make(cache.FiatMap)
 
 	done := false
 	for !done {
@@ -328,10 +328,10 @@ func fiatMapping(c chan map[string][]cryptoCompare) storage.FiatMap {
 				break
 			}
 			for k, v := range m {
-				priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+				priceMap := make(map[cache.CryptoCurrency]*cache.Details)
 
 				for _, i := range v {
-					details := storage.Details{}
+					details := cache.Details{}
 					details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
 					details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
 					details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
@@ -340,7 +340,7 @@ func fiatMapping(c chan map[string][]cryptoCompare) storage.FiatMap {
 				}
 
 				if _, ok := fiatMap[typeconv.StorageFiat(k)]; !ok {
-					fiatMap[typeconv.StorageFiat(k)] = map[storage.CryptoCurrency]*storage.Details{}
+					fiatMap[typeconv.StorageFiat(k)] = map[cache.CryptoCurrency]*cache.Details{}
 				}
 				fiatMap[typeconv.StorageFiat(k)] = priceMap
 			}
@@ -350,7 +350,7 @@ func fiatMapping(c chan map[string][]cryptoCompare) storage.FiatMap {
 	return fiatMap
 }
 
-func (s *Service) GetPricesHUOBI() (storage.FiatMap, error) {
+func (s *Service) GetPricesHUOBI() (cache.FiatMap, error) {
 	rq, err := req.Get(urlHuobi)
 	if err != nil {
 		return nil, errors.Wrap(err, "huobi")
@@ -363,13 +363,13 @@ func (s *Service) GetPricesHUOBI() (storage.FiatMap, error) {
 	return huobiMapping(&h, s.List), nil
 }
 
-func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
-	fiatMap := make(storage.FiatMap)
-	priceMap := make(map[storage.CryptoCurrency]*storage.Details)
+func huobiMapping(h *huobi, list map[string]string) cache.FiatMap {
+	fiatMap := make(cache.FiatMap)
+	priceMap := make(map[cache.CryptoCurrency]*cache.Details)
 
 	for _, i := range h.Data {
 		if val, ok := list[i.Symbol]; ok {
-			var details storage.Details
+			var details cache.Details
 			details.Price = strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
 			priceMap[typeconv.StorageCC(strings.ToLower(val))] = &details
 			fiatMap[typeconv.StorageFiat("USD")] = priceMap
@@ -378,7 +378,7 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 	return fiatMap
 }
 
-func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (storage.FiatMap, error) {
+func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (cache.FiatMap, error) {
 	rq := req.New()
 	resp, err := rq.Post(trustWalletV2URL, req.BodyJSON(&prices))
 	if err != nil {
@@ -394,10 +394,10 @@ func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (storage.FiatMap, error
 	return m, nil
 }
 
-func trustV2FiatMap(r *trustV2Response) storage.FiatMap {
-	m := make(storage.FiatMap)
+func trustV2FiatMap(r *trustV2Response) cache.FiatMap {
+	m := make(cache.FiatMap)
 	currency := typeconv.StorageFiat(r.Currency)
-	m[currency] = map[storage.CryptoCurrency]*storage.Details{}
+	m[currency] = map[cache.CryptoCurrency]*cache.Details{}
 	for _, doc := range r.Docs {
 		coin := typeconv.StorageCC(strconv.Itoa(doc.Coin))
 

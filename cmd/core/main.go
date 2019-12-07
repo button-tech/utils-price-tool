@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"log"
 	"os"
 	"os/signal"
@@ -8,13 +9,12 @@ import (
 
 	"github.com/button-tech/logger"
 	core "github.com/button-tech/utils-price-tool/core/server"
-	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/button-tech/utils-price-tool/tasks"
 )
 
 func main() {
-	store := storage.NewCache()
+	store := cache.NewCache()
 	getPrices := services.New(store)
 	go tasks.FetchGroup(getPrices, store)
 

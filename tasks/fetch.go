@@ -1,19 +1,19 @@
 package tasks
 
 import (
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/pkg/slip0044"
-	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/pkg/errors"
 )
 
 type setter interface {
-	Set(a storage.Api, f storage.FiatMap)
+	Set(a cache.Api, f cache.FiatMap)
 }
 
 type worker func(wg *sync.WaitGroup, service *services.Service, store setter)

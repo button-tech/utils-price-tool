@@ -1,10 +1,10 @@
 package handle
 
 import (
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"strings"
 	"sync"
 
-	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/pkg/errors"
@@ -13,8 +13,8 @@ import (
 const trust = "cmc"
 
 type Cache interface {
-	Get(a storage.Api) (f storage.FiatMap, err error)
-	Set(a storage.Api, f storage.FiatMap)
+	Get(a cache.Api) (f cache.FiatMap, err error)
+	Set(a cache.Api, f cache.FiatMap)
 }
 
 var supportedAPIv1 = map[string]struct{}{
@@ -113,9 +113,9 @@ func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error
 
 	var wg sync.WaitGroup
 	wg.Add(len(notExistTokens))
-	c := make(chan storage.FiatMap, len(notExistTokens))
+	c := make(chan cache.FiatMap, len(notExistTokens))
 	for _, t := range notExistTokens {
-		go func(wg *sync.WaitGroup, t services.TokensWithCurrency, c chan storage.FiatMap) {
+		go func(wg *sync.WaitGroup, t services.TokensWithCurrency, c chan cache.FiatMap) {
 			f, err := s.GetPricesCMC(t)
 			if err != nil {
 
@@ -145,7 +145,7 @@ func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error
 	return result, nil
 }
 
-func changesControl(m map[string]string, d *storage.Details, c string) error {
+func changesControl(m map[string]string, d *cache.Details, c string) error {
 	switch c {
 	case "0", "":
 	case "1":
@@ -162,7 +162,7 @@ func changesControl(m map[string]string, d *storage.Details, c string) error {
 	return nil
 }
 
-func storageCC(api, t string) (c storage.CryptoCurrency) {
+func storageCC(api, t string) (c cache.CryptoCurrency) {
 	if api == "ntrust" {
 		c = typeconv.StorageCC(t)
 		return

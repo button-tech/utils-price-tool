@@ -1,20 +1,20 @@
 package v1
 
 import (
-	"github.com/button-tech/utils-price-tool/pkg/storage"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/services"
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
 type Provider struct {
-	Store             *storage.Cache
+	Store             *cache.Cache
 	GetPrices         *services.Service
 	privateCurrencies map[string][]string
 }
 
 type controller struct {
 	getPrices         *services.Service
-	store             *storage.Cache
+	store             *cache.Cache
 	privateCurrencies map[string][]string
 }
 

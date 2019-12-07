@@ -1,16 +1,16 @@
 package v2
 
 import (
-	"github.com/button-tech/utils-price-tool/pkg/storage"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
 type Provider struct {
-	Store *storage.Cache
+	Store *cache.Cache
 }
 
 type controller struct {
-	store *storage.Cache
+	store *cache.Cache
 }
 
 func API(g *routing.RouteGroup, p *Provider) {

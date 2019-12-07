@@ -120,23 +120,6 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 	return nil
 }
 
-//func (c *controller) tokens(ctx *routing.Context) error {
-//	const funcName = "tokens"
-//	var r handle.Data
-//	if err := json.Unmarshal(ctx.PostBody(), &r); err != nil {
-//		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
-//			API:     v1,
-//			Func:    funcName,
-//			Err:     err,
-//			Payload: respond.Payload("request", "json.Unmarshal"),
-//		}, nil)
-//		return nil
-//	}
-//
-//	unique := handle.Unify(&r)
-//
-//}
-
 func supportInfo() []handle.APIs {
 	supportedCRC := []string{"0", "1", "24"}
 	crc := handle.APIs{
