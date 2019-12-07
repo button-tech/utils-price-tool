@@ -72,6 +72,7 @@ func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 			defer tWG.Done()
 		}(t, &tokensWG)
 	}
+
 	tokensWG.Wait()
 	wg.Done()
 }

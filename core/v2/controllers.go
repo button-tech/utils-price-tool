@@ -2,6 +2,7 @@ package v2
 
 import (
 	"encoding/json"
+
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	routing "github.com/qiangxue/fasthttp-routing"
@@ -26,7 +27,7 @@ func (c *controller) courses(ctx *routing.Context) error {
 	}
 
 	unique := handle.Unify(&r)
-	resp, err := handle.Reply(&unique, v2, c.store)
+	resp, err := handle.Reply(&unique, v2, c.store, nil)
 	if err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v2,

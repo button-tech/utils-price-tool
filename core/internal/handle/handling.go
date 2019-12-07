@@ -6,11 +6,15 @@ import (
 
 	"github.com/button-tech/utils-price-tool/pkg/storage"
 	"github.com/button-tech/utils-price-tool/pkg/typeconv"
+	"github.com/button-tech/utils-price-tool/services"
 	"github.com/pkg/errors"
 )
 
-type FiatMap interface {
+const trust = "cmc"
+
+type Cache interface {
 	Get(a storage.Api) (f storage.FiatMap, err error)
+	Set(a storage.Api, f storage.FiatMap)
 }
 
 var supportedAPIv1 = map[string]struct{}{
@@ -42,12 +46,12 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, f FiatMap) ([]response, error) {
+func Reply(u *UniqueData, v string, f Cache, s *services.Service) ([]response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
 	}
-	return mapping(u, f)
+	return mapping(u, f, s)
 }
 
 func unify(wg *sync.WaitGroup, u map[string]struct{}, subject []string) {
@@ -66,14 +70,17 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, f FiatMap) ([]response, error) {
+func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error) {
 	result := make([]response, 0, len(u.Currencies))
 	api := u.API
-	stored, err := f.Get(typeconv.StorageApi(api))
+	stored, err := cache.Get(typeconv.StorageApi(api))
 	if err != nil {
 		return nil, err
 	}
+
+	var notExistTokens []services.TokensWithCurrency
 	for c := range u.Currencies {
+		tokens := services.TokensWithCurrency{Currency: c}
 		price := response{}
 		if fiatVal, fiatOk := stored[typeconv.StorageFiat(c)]; fiatOk {
 			price.Currency = c
@@ -85,13 +92,56 @@ func mapping(u *UniqueData, f FiatMap) ([]response, error) {
 						return nil, err
 					}
 					price.Rates = append(price.Rates, contract)
+				} else {
+					if s != nil {
+						tokens.Tokens = append(tokens.Tokens, services.Token{Contract: t})
+					}
 				}
 			}
 		}
+
 		if price.Currency != "" {
 			result = append(result, price)
 		}
+		if s != nil {
+			notExistTokens = append(notExistTokens, tokens)
+		}
 	}
+	if s == nil {
+		return result, nil
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(notExistTokens))
+	c := make(chan storage.FiatMap, len(notExistTokens))
+	for _, t := range notExistTokens {
+		go func(wg *sync.WaitGroup, t services.TokensWithCurrency, c chan storage.FiatMap) {
+			f, err := s.GetPricesCMC(t)
+			if err != nil {
+
+			}
+			// cache.Set("cmcTokens", f)
+			c <- f
+			wg.Done()
+		}(&wg, t, c)
+	}
+	wg.Wait()
+	close(c)
+
+	for f := range c {
+		for i, v := range result {
+			if ccMap, ok := f[typeconv.StorageFiat(v.Currency)]; ok {
+				for c, d := range ccMap {
+					contract := map[string]string{string(c): d.Price}
+					if err := changesControl(contract, d, u.Change); err != nil {
+						return nil, err
+					}
+					result[i].Rates = append(result[i].Rates, contract)
+				}
+			}
+		}
+	}
+
 	return result, nil
 }
 

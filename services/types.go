@@ -69,12 +69,13 @@ type pureCoinMarketCap struct {
 
 type PricesTrustV2 struct {
 	Currency string   `json:"currency"`
-	Assets   []assets `json:"assets"`
+	Assets   []Assets `json:"Assets"`
 }
 
-type assets struct {
-	Coin int    `json:"coin"`
-	Type string `json:"type"`
+type Assets struct {
+	Coin    int    `json:"coin"`
+	Type    string `json:"type"`
+	TokenID string `json:"token_id,-"`
 }
 
 type trustV2Response struct {

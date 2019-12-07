@@ -24,16 +24,18 @@ const (
 const coin = "coin"
 
 var (
-	urlTrustWallet   = os.Getenv("TRUST_URL")
 	topListAPIKey    = os.Getenv("API_KEY")
-	urlTrustWalletV2 = os.Getenv("TRUST_URL_V2")
+	trustWalletURL   = os.Getenv("TRUST_URL")
+	trustWalletV2URL = os.Getenv("TRUST_URL_V2")
 )
 
 type Service struct {
+	mu           sync.Mutex
 	TrustV2Coins []PricesTrustV2
+	List         map[string]string
+	Tokens       map[string]string
 
 	store *storage.Cache
-	list  map[string]string
 }
 
 type maps struct {
@@ -91,7 +93,7 @@ var trustV2Coins = map[string]int{
 func New(store *storage.Cache) *Service {
 	return &Service{
 		TrustV2Coins: CreateTrustV2RequestData(),
-		list:         make(map[string]string),
+		List:         make(map[string]string),
 		store:        store,
 	}
 }
@@ -99,15 +101,10 @@ func New(store *storage.Cache) *Service {
 func CreateTrustV2RequestData() []PricesTrustV2 {
 	prices := make([]PricesTrustV2, 0, len(currencies))
 	for _, c := range currencies {
-		price := PricesTrustV2{
-			Currency: c,
-		}
-		allAssets := make([]assets, 0, len(trustV2Coins))
+		price := PricesTrustV2{Currency: c}
+		allAssets := make([]Assets, 0, len(trustV2Coins))
 		for _, v := range trustV2Coins {
-			allAssets = append(allAssets, assets{
-				Coin: v,
-				Type: coin,
-			})
+			allAssets = append(allAssets, Assets{Coin: v, Type: coin})
 		}
 		price.Assets = allAssets
 		prices = append(prices, price)
@@ -117,11 +114,15 @@ func CreateTrustV2RequestData() []PricesTrustV2 {
 
 func (s *Service) CreateCMCRequestData() []TokensWithCurrency {
 	var tokensOneCurrency TokensWithCurrency
-	tokensMultiCurrencies := make([]TokensWithCurrency, len(currencies))
-	tokens := make([]Token, len(s.list))
+	tokensMultiCurrencies := make([]TokensWithCurrency, 0, len(currencies))
+	tokens := make([]Token, 0, len(s.List))
 
-	for _, c := range s.list {
+	for _, c := range s.List {
 		tokens = append(tokens, Token{Contract: c})
+	}
+
+	for _, t := range s.Tokens {
+		tokens = append(tokens, Token{Contract: t})
 	}
 	tokensOneCurrency.Tokens = tokens
 
@@ -133,7 +134,7 @@ func (s *Service) CreateCMCRequestData() []TokensWithCurrency {
 	return tokensMultiCurrencies
 }
 
-// Get top list of crypto-currencies from coin-market
+// Get top List of crypto-currencies from coin-market
 func (s *Service) GetTopList(c map[string]string) error {
 	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
@@ -167,7 +168,7 @@ func (s *Service) GetTopList(c map[string]string) error {
 
 	ms.FiatMap[typeconv.StorageFiat("USD")] = ms.PriceMap
 	s.store.Set("coinMarketCap", ms.FiatMap)
-	s.list = topListMap
+	s.List = topListMap
 
 	return nil
 }
@@ -198,7 +199,7 @@ func storeMapsConstructor() maps {
 }
 
 func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (storage.FiatMap, error) {
-	rq, err := req.Post(urlTrustWallet, req.BodyJSON(tokens))
+	rq, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
 		return nil, errors.Wrap(err, "GetPricesCMC")
 	}
@@ -239,7 +240,7 @@ func CreateCRCRequestData() []string {
 
 func (s *Service) GetPricesCRC() storage.FiatMap {
 	var fsyms string
-	for k := range s.list {
+	for k := range s.List {
 		fsyms += k + ","
 	}
 
@@ -268,7 +269,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error)
 
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
-		if val, ok := s.list[string(k)]; ok {
+		if val, ok := s.List[string(k)]; ok {
 			crypto := v.GetObject()
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
 				var c cryptoCompare
@@ -359,7 +360,7 @@ func (s *Service) GetPricesHUOBI() (storage.FiatMap, error) {
 	if err := rq.ToJSON(&h); err != nil {
 		return nil, errors.Wrap(err, "toJSON huobi")
 	}
-	return huobiMapping(&h, s.list), nil
+	return huobiMapping(&h, s.List), nil
 }
 
 func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
@@ -379,7 +380,7 @@ func huobiMapping(h *huobi, list map[string]string) storage.FiatMap {
 
 func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (storage.FiatMap, error) {
 	rq := req.New()
-	resp, err := rq.Post(urlTrustWalletV2, req.BodyJSON(&prices))
+	resp, err := rq.Post(trustWalletV2URL, req.BodyJSON(&prices))
 	if err != nil {
 		return nil, errors.Wrap(err, "GetPricesTrustV2")
 	}
