@@ -14,7 +14,7 @@ type UniqueData struct {
 	API        string
 }
 
-type response struct {
+type Response struct {
 	Currency string              `json:"currency"`
 	Rates    []map[string]string `json:"rates"`
 }

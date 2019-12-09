@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	routing "github.com/qiangxue/fasthttp-routing"
 )
@@ -18,6 +19,7 @@ func API(g *routing.RouteGroup, p *Provider) {
 		store: p.Store,
 	}
 
-	g.Post("/prices", c.courses)
 	g.Get("/info", c.info)
+	g.Get("/docs/swagger.json", respond.SwaggerJSONHandler(v2))
+	g.Post("/prices", c.courses)
 }

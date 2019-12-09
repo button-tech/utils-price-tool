@@ -1,5 +1,23 @@
 package v1
 
+// Utils-price-tool v1 API.
+//
+// This project is included in Button-Wallet Utils-price-tool project
+//
+//     Schemes: http
+//     Host: localhost
+//     BasePath: /courses/v1/
+//     Version: 0.0.1
+//     Contact: Frolov Ivan <if@buttonwallet.com>
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+// swagger:meta
+
 import (
 	"encoding/json"
 	"strconv"

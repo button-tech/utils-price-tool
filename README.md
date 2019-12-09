@@ -2,6 +2,156 @@ This API allows you to get current exchange rates from crypto-compare and trust 
  
 The main feature is support of trust-wallet requests.
 
+```
+                                    Version v1
+```
+Method POST:
+
+```/courses/v2/prices```
+Example:
+
+```Request body:```
+
+```
+{
+    "tokens": [
+        "0", "457"
+    ],
+    "currencies": [
+        "USD"
+    ],
+    "change": "1",
+    "api": "pcmc"
+}
+```
+
+```Response```
+
+```
+{
+    "data": [
+        {
+            "currency": "USD",
+            "rates": [
+                {
+                    "0": "7469.7828042500",
+                    "percent_change": "-0.005513"
+                },
+                {
+                    "457": "0.1638779609",
+                    "percent_change": "0.539258"
+                }
+            ]
+        }
+    ]
+}
+```
+
+Method GET:
+
+```/courses/v2/info```
+
+```
+{
+    "api": [
+        {
+            "name": "ntrust",
+            "supported_changes": [
+                "0",
+                "24"
+            ],
+            "supported_fiats": {
+                "AE": 457,
+                "AION": 425,
+                "ALGO": 283,
+                "ATOM": 118,
+                "BCH": 145,
+                "BNB": 714,
+                "BTC": 0,
+                "CLO": 820,
+                "DASH": 5,
+                "DCR": 42,
+                "DGB": 20,
+                "DOGE": 3,
+                "ETC": 61,
+                "ETH": 60,
+                "FIO": 235,
+                "GO": 6060,
+                "GRS": 17,
+                "ICX": 74,
+                "IOTX": 304,
+                "KIN": 2017,
+                "LTC": 2,
+                "NANO": 165,
+                "NAS": 2718,
+                "NIM": 242,
+                "ONT": 1024,
+                "POA": 178,
+                "QTUM": 2301,
+                "RVN": 175,
+                "SEM": 7562605,
+                "THETA": 500,
+                "TOMO": 889,
+                "TRX": 195,
+                "TT": 1001,
+                "VET": 818,
+                "VIA": 14,
+                "WAN": 5718350,
+                "WAVES": 5741564,
+                "XLM": 148,
+                "XRP": 144,
+                "XTZ": 1729,
+                "XZC": 136,
+                "ZEC": 133,
+                "ZEL": 19167,
+                "ZIL": 313
+            }
+        },
+        {
+            "name": "pcmc",
+            "supported_changes": [
+                "0",
+                "24",
+                "7d"
+            ],
+            "supported_fiats": {
+                "AE": 457,
+                "ALGO": 283,
+                "ATOM": 118,
+                "BCH": 145,
+                "BNB": 714,
+                "BTC": 0,
+                "DASH": 5,
+                "DCR": 42,
+                "DGB": 20,
+                "DOGE": 3,
+                "ETC": 61,
+                "ETH": 60,
+                "ICX": 74,
+                "LTC": 2,
+                "NANO": 165,
+                "ONT": 1024,
+                "QTUM": 2301,
+                "RVN": 175,
+                "THETA": 500,
+                "TRX": 195,
+                "VET": 818,
+                "WAVES": 5741564,
+                "XLM": 148,
+                "XRP": 144,
+                "XTZ": 1729,
+                "ZEC": 133,
+                "ZIL": 313
+            }
+        }
+    ]
+}
+```
+
+```
+                                    Version v1
+```
+
 Method POST: 
 
 ```/courses/v1/prices```

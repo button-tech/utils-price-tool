@@ -1,16 +1,14 @@
 package handle
 
 import (
-	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"strings"
 	"sync"
 
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/pkg/errors"
 )
-
-const trust = "cmc"
 
 type Cache interface {
 	Get(a cache.Api) (f cache.FiatMap, err error)
@@ -46,7 +44,7 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, f Cache, s *services.Service) ([]response, error) {
+func Reply(u *UniqueData, v string, f Cache, s *services.Service) ([]Response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
@@ -70,8 +68,8 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, c Cache, s *services.Service) ([]response, error) {
-	result := make([]response, 0, len(u.Currencies))
+func mapping(u *UniqueData, c Cache, s *services.Service) ([]Response, error) {
+	result := make([]Response, 0, len(u.Currencies))
 	api := u.API
 	stored, err := c.Get(typeconv.StorageApi(api))
 	if err != nil {
@@ -81,7 +79,7 @@ func mapping(u *UniqueData, c Cache, s *services.Service) ([]response, error) {
 	var notExistTokens []services.TokensWithCurrency
 	for c := range u.Currencies {
 		tokens := services.TokensWithCurrency{Currency: c}
-		price := response{}
+		price := Response{}
 		if fiatVal, fiatOk := stored[typeconv.StorageFiat(c)]; fiatOk {
 			price.Currency = c
 			for t := range u.Tokens {
@@ -120,7 +118,6 @@ func mapping(u *UniqueData, c Cache, s *services.Service) ([]response, error) {
 			if err != nil {
 
 			}
-			// cache.Set("cmcTokens", f)
 			c <- f
 			wg.Done()
 		}(&wg, t, notExistTokensChan)
