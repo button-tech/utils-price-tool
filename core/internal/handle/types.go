@@ -20,6 +20,7 @@ type response struct {
 }
 
 type APIs struct {
-	Name             string   `json:"name"`
-	SupportedChanges []string `json:"supported_changes"`
+	Name             string         `json:"name"`
+	SupportedChanges []string       `json:"supported_changes"`
+	SupportedFiats   map[string]int `json:"supported_fiats"`
 }

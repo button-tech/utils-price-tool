@@ -43,7 +43,37 @@ type maps struct {
 	PriceMap map[cache.CryptoCurrency]*cache.Details
 }
 
-var trustV2Coins = map[string]int{
+var PureCMCCoins = map[string]int{
+	"AE":    457,
+	"ALGO":  283,
+	"ATOM":  118,
+	"BCH":   145,
+	"BNB":   714,
+	"BTC":   0,
+	"DASH":  5,
+	"DCR":   42,
+	"DGB":   20,
+	"DOGE":  3,
+	"ETC":   61,
+	"ETH":   60,
+	"ICX":   74,
+	"LTC":   2,
+	"NANO":  165,
+	"ONT":   1024,
+	"QTUM":  2301,
+	"RVN":   175,
+	"THETA": 500,
+	"TRX":   195,
+	"VET":   818,
+	"WAVES": 5741564,
+	"XLM":   148,
+	"XRP":   144,
+	"XTZ":   1729,
+	"ZEC":   133,
+	"ZIL":   313,
+}
+
+var TrustV2Coins = map[string]int{
 	"ETH":   60,
 	"ETC":   61,
 	"ICX":   74,
@@ -102,8 +132,8 @@ func CreateTrustV2RequestData() []PricesTrustV2 {
 	prices := make([]PricesTrustV2, 0, len(currencies))
 	for _, c := range currencies {
 		price := PricesTrustV2{Currency: c}
-		allAssets := make([]Assets, 0, len(trustV2Coins))
-		for _, v := range trustV2Coins {
+		allAssets := make([]Assets, 0, len(TrustV2Coins))
+		for _, v := range TrustV2Coins {
 			allAssets = append(allAssets, Assets{Coin: v, Type: coin})
 		}
 		price.Assets = allAssets
@@ -416,7 +446,7 @@ func pureCMCMapping(pure pureCoinMarketCap) cache.FiatMap {
 	m := storeMapsConstructor()
 	m.FiatMap[typeconv.StorageFiat("USD")] = map[cache.CryptoCurrency]*cache.Details{}
 	for _, v := range pure.Data {
-		if coinID, ok := trustV2Coins[v.Symbol]; ok {
+		if coinID, ok := TrustV2Coins[v.Symbol]; ok {
 			pricesData := detailsConversion(
 				v.Quote.USD.Price,
 				v.Quote.USD.PercentChange1H,
