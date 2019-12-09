@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const trust = "cmc"
-
 type Cache interface {
 	Get(a cache.Api) (f cache.FiatMap, err error)
 	Set(a cache.Api, f cache.FiatMap)
@@ -70,10 +68,10 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error) {
+func mapping(u *UniqueData, с Cache, s *services.Service) ([]response, error) {
 	result := make([]response, 0, len(u.Currencies))
 	api := u.API
-	stored, err := cache.Get(typeconv.StorageApi(api))
+	stored, err := с.Get(typeconv.StorageApi(api))
 	if err != nil {
 		return nil, err
 	}
