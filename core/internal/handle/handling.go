@@ -70,10 +70,10 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error) {
+func mapping(u *UniqueData, c Cache, s *services.Service) ([]response, error) {
 	result := make([]response, 0, len(u.Currencies))
 	api := u.API
-	stored, err := cache.Get(typeconv.StorageApi(api))
+	stored, err := c.Get(typeconv.StorageApi(api))
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error
 
 	var wg sync.WaitGroup
 	wg.Add(len(notExistTokens))
-	c := make(chan cache.FiatMap, len(notExistTokens))
+	notExistTokensChan := make(chan cache.FiatMap, len(notExistTokens))
 	for _, t := range notExistTokens {
 		go func(wg *sync.WaitGroup, t services.TokensWithCurrency, c chan cache.FiatMap) {
 			f, err := s.GetPricesCMC(t)
@@ -123,12 +123,12 @@ func mapping(u *UniqueData, cache Cache, s *services.Service) ([]response, error
 			// cache.Set("cmcTokens", f)
 			c <- f
 			wg.Done()
-		}(&wg, t, c)
+		}(&wg, t, notExistTokensChan)
 	}
 	wg.Wait()
-	close(c)
+	close(notExistTokensChan)
 
-	for f := range c {
+	for f := range notExistTokensChan {
 		for i, v := range result {
 			if ccMap, ok := f[typeconv.StorageFiat(v.Currency)]; ok {
 				for c, d := range ccMap {
