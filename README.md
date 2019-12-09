@@ -3,7 +3,7 @@ This API allows you to get current exchange rates from crypto-compare and trust 
 The main feature is support of trust-wallet requests.
 
 ```
-                                    Version v1
+                                    Version v2
 ```
 Method POST:
 
