@@ -25,7 +25,7 @@ var supportedAPIv1 = map[string]struct{}{
 
 var supportedAPIv2 = map[string]struct{}{
 	"otrust": {},
-	"cmc":    {},
+	"pcmc":   {},
 	"ntrust": {},
 }
 
@@ -156,6 +156,10 @@ func changesControl(m map[string]string, d *cache.Details, c string) error {
 		if d.ChangePCT24Hour != "" {
 			m["percent_change"] = d.ChangePCT24Hour
 		}
+	case "7d":
+		if d.ChangePCT7Day != "" {
+			m["percent_change"] = d.ChangePCT7Day
+		}
 	default:
 		return errors.New("API changes: no matches")
 	}
@@ -163,7 +167,7 @@ func changesControl(m map[string]string, d *cache.Details, c string) error {
 }
 
 func storageCC(api, t string) (c cache.CryptoCurrency) {
-	if api == "ntrust" {
+	if api == "ntrust" || api == "pcmc" {
 		c = typeconv.StorageCC(t)
 		return
 	}

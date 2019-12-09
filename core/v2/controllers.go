@@ -47,10 +47,17 @@ func (c *controller) info(ctx *routing.Context) error {
 	return nil
 }
 
-func supportInfo() handle.APIs {
+func supportInfo() []handle.APIs {
+	var apis []handle.APIs
 	supportedNewTrust := []string{"0", "24"}
-	return handle.APIs{
+	supportedPureCMC := []string{"0", "24", "7d"}
+	apis = append(apis, handle.APIs{
 		Name:             "ntrust",
 		SupportedChanges: supportedNewTrust,
-	}
+	},
+		handle.APIs{
+			Name:             "pcmc",
+			SupportedChanges: supportedPureCMC,
+		})
+	return apis
 }

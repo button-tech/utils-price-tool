@@ -17,7 +17,7 @@ import (
 
 const (
 	urlHuobi   = "https://api.hbdm.com/api/v1/contract_index"
-	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
+	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD"
 	urlCRC     = "https://min-api.cryptocompare.com/data/pricemultifull"
 )
 
@@ -150,9 +150,10 @@ func (s *Service) GetTopList(c map[string]string) error {
 		return errors.New("responseHTTPStatus: NotOk")
 	}
 
+	top100 := topList.Data[:100]
 	ms := storeMapsConstructor()
 	topListMap := make(map[string]string)
-	for _, item := range topList.Data {
+	for _, item := range top100 {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[item.Symbol] = val
 
@@ -165,6 +166,9 @@ func (s *Service) GetTopList(c map[string]string) error {
 			ms.PriceMap[typeconv.StorageCC(val)] = &pricesData
 		}
 	}
+
+	m := pureCMCMapping(topList)
+	s.store.Set("pcmc", m)
 
 	ms.FiatMap[typeconv.StorageFiat("USD")] = ms.PriceMap
 	s.store.Set("coinMarketCap", ms.FiatMap)
@@ -406,4 +410,23 @@ func trustV2FiatMap(r *trustV2Response) cache.FiatMap {
 	}
 
 	return m
+}
+
+func pureCMCMapping(pure pureCoinMarketCap) cache.FiatMap {
+	m := storeMapsConstructor()
+	m.FiatMap[typeconv.StorageFiat("USD")] = map[cache.CryptoCurrency]*cache.Details{}
+	for _, v := range pure.Data {
+		if coinID, ok := trustV2Coins[v.Symbol]; ok {
+			pricesData := detailsConversion(
+				v.Quote.USD.Price,
+				v.Quote.USD.PercentChange1H,
+				v.Quote.USD.PercentChange24H,
+				v.Quote.USD.PercentChange7D,
+			)
+			convCoinID := strconv.Itoa(coinID)
+			m.PriceMap[typeconv.StorageCC(convCoinID)] = &pricesData
+		}
+	}
+	m.FiatMap[typeconv.StorageFiat("USD")] = m.PriceMap
+	return m.FiatMap
 }
