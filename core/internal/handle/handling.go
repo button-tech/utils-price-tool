@@ -1,18 +1,17 @@
 package handle
 
 import (
-	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"strings"
+	"log"
 	"sync"
 
-	"github.com/button-tech/utils-price-tool/pkg/typeconv"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/pkg/errors"
 )
 
 type Cache interface {
-	Get(a cache.Api) (f cache.FiatMap, err error)
-	Set(a cache.Api, f cache.FiatMap)
+	Get(k string, d cache.Details)
+	Set(k string, d cache.Details)
 }
 
 var supportedAPIv1 = map[string]struct{}{
@@ -23,7 +22,7 @@ var supportedAPIv1 = map[string]struct{}{
 
 var supportedAPIv2 = map[string]struct{}{
 	"otrust": {},
-	"cmc":    {},
+	"pcmc":   {},
 	"ntrust": {},
 }
 
@@ -44,12 +43,12 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, f Cache, s *services.Service) ([]response, error) {
+func Reply(u *UniqueData, v string, store *cache.Cache, s *services.GetPrices) ([]Response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
 	}
-	return mapping(u, f, s)
+	return mapping(u, store, s)
 }
 
 func unify(wg *sync.WaitGroup, u map[string]struct{}, subject []string) {
@@ -68,75 +67,62 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, c Cache, s *services.Service) ([]response, error) {
-	result := make([]response, 0, len(u.Currencies))
-	api := u.API
-	stored, err := c.Get(typeconv.StorageApi(api))
-	if err != nil {
-		return nil, err
-	}
-
-	var notExistTokens []services.TokensWithCurrency
-	for c := range u.Currencies {
-		tokens := services.TokensWithCurrency{Currency: c}
-		price := response{}
-		if fiatVal, fiatOk := stored[typeconv.StorageFiat(c)]; fiatOk {
-			price.Currency = c
-			for t := range u.Tokens {
-				currency := storageCC(u.API, t)
-				if details, ok := fiatVal[currency]; ok {
-					contract := map[string]string{t: details.Price}
-					if err := changesControl(contract, details, u.Change); err != nil {
-						return nil, err
-					}
-					price.Rates = append(price.Rates, contract)
-				} else {
-					if s != nil {
-						tokens.Tokens = append(tokens.Tokens, services.Token{Contract: t})
-					}
-				}
-			}
-		}
-
-		if price.Currency != "" {
-			result = append(result, price)
-		}
-		if s != nil {
-			notExistTokens = append(notExistTokens, tokens)
-		}
-	}
-	if s == nil {
-		return result, nil
-	}
+func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Response, error) {
+	result := make([]Response, 0, len(u.Currencies))
 
 	var wg sync.WaitGroup
-	wg.Add(len(notExistTokens))
-	notExistTokensChan := make(chan cache.FiatMap, len(notExistTokens))
-	for _, t := range notExistTokens {
-		go func(wg *sync.WaitGroup, t services.TokensWithCurrency, c chan cache.FiatMap) {
-			f, err := s.GetPricesCMC(t)
-			if err != nil {
-
-			}
-			// cache.Set("cmcTokens", f)
-			c <- f
-			wg.Done()
-		}(&wg, t, notExistTokensChan)
-	}
-	wg.Wait()
-	close(notExistTokensChan)
-
-	for f := range notExistTokensChan {
-		for i, v := range result {
-			if ccMap, ok := f[typeconv.StorageFiat(v.Currency)]; ok {
-				for c, d := range ccMap {
-					contract := map[string]string{string(c): d.Price}
-					if err := changesControl(contract, d, u.Change); err != nil {
-						return nil, err
-					}
-					result[i].Rates = append(result[i].Rates, contract)
+	for c := range u.Currencies {
+		tokens := services.TokensWithCurrency{Currency: c}
+		var price Response
+		for t := range u.Tokens {
+			k := cache.GenKey(u.API, c, t)
+			details, ok := store.Get(k)
+			if ok {
+				contract := map[string]string{t: details.Price}
+				if err := changesControl(contract, &details, u.Change); err != nil {
+					return nil, err
+				}
+				price.Rates = append(price.Rates, contract)
+			} else {
+				if s != nil {
+					tokens.Tokens = append(tokens.Tokens, services.Token{Contract: t})
 				}
 			}
+		}
+		if len(price.Rates) > 0 {
+			price.Currency = c
+			result = append(result, price)
+		}
+		if s != nil && len(tokens.Tokens) > 0 {
+			wg.Add(1)
+			go func(wg *sync.WaitGroup, store *cache.Cache) {
+				if err := s.GetPricesCMC(tokens); err != nil {
+					log.Println(err)
+				}
+				wg.Done()
+			}(&wg, store)
+		}
+	}
+
+	if s == nil || len(result) > 0 {
+		return result, nil
+	}
+	wg.Wait()
+	for c := range u.Currencies {
+		price := Response{Currency: c}
+		for t := range u.Tokens {
+			k := cache.GenKey("cmc", c, t)
+			details, ok := store.Get(k)
+			if ok {
+				contract := map[string]string{t: details.Price}
+				if err := changesControl(contract, &details, u.Change); err != nil {
+					return nil, err
+				}
+				price.Rates = append(price.Rates, contract)
+			}
+		}
+		if price.Currency != "" {
+			result = append(result, price)
 		}
 	}
 
@@ -154,17 +140,12 @@ func changesControl(m map[string]string, d *cache.Details, c string) error {
 		if d.ChangePCT24Hour != "" {
 			m["percent_change"] = d.ChangePCT24Hour
 		}
+	case "7d":
+		if d.ChangePCT7Day != "" {
+			m["percent_change"] = d.ChangePCT7Day
+		}
 	default:
 		return errors.New("API changes: no matches")
 	}
 	return nil
-}
-
-func storageCC(api, t string) (c cache.CryptoCurrency) {
-	if api == "ntrust" {
-		c = typeconv.StorageCC(t)
-		return
-	}
-	c = typeconv.StorageCC(strings.ToLower(t))
-	return
 }

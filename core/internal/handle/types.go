@@ -14,12 +14,13 @@ type UniqueData struct {
 	API        string
 }
 
-type response struct {
+type Response struct {
 	Currency string              `json:"currency"`
 	Rates    []map[string]string `json:"rates"`
 }
 
 type APIs struct {
-	Name             string   `json:"name"`
-	SupportedChanges []string `json:"supported_changes"`
+	Name             string         `json:"name"`
+	SupportedChanges []string       `json:"supported_changes"`
+	SupportedFiats   map[string]int `json:"supported_fiats"`
 }
