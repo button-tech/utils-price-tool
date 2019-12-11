@@ -1,7 +1,6 @@
 package tasks
 
 import (
-	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"runtime"
 	"sync"
 	"time"
@@ -9,16 +8,11 @@ import (
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/pkg/slip0044"
 	"github.com/button-tech/utils-price-tool/services"
-	"github.com/pkg/errors"
 )
 
-type setter interface {
-	Set(a cache.Api, f cache.FiatMap)
-}
+type worker func(wg *sync.WaitGroup, service *services.GetPrices)
 
-type worker func(wg *sync.WaitGroup, service *services.Service, store setter)
-
-func FetchGroup(service *services.Service, store setter) {
+func FetchGroup(service *services.GetPrices) {
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
 		logger.Error("AddTrustHexBySlip", err)
@@ -37,7 +31,7 @@ func FetchGroup(service *services.Service, store setter) {
 
 		for _, worker := range ws {
 			wg.Add(1)
-			go worker(&wg, service, store)
+			go worker(&wg, service)
 		}
 
 		logger.Info("Count goroutines: ", runtime.NumGoroutine())
@@ -49,26 +43,25 @@ func FetchGroup(service *services.Service, store setter) {
 }
 
 func workers() []worker {
-	return []worker{cmcWorker,
+	return []worker{
+		cmcWorker,
 		crcWorker,
 		huobiWorker,
 		trustV2Worker,
 	}
 }
 
-func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
+func cmcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
 	tokens := service.CreateCMCRequestData()
 
 	var tokensWG sync.WaitGroup
 	for _, t := range tokens {
 		tokensWG.Add(1)
 		go func(token services.TokensWithCurrency, tWG *sync.WaitGroup) {
-			got, err := service.GetPricesCMC(token)
-			if err != nil {
+			if err := service.GetPricesCMC(token); err != nil {
 				logger.Error("cmcWorker", err)
 				return
 			}
-			store.Set("cmc", got)
 			defer tWG.Done()
 		}(t, &tokensWG)
 	}
@@ -77,40 +70,28 @@ func cmcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
 	wg.Done()
 }
 
-func crcWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
-	res := service.GetPricesCRC()
-	if res == nil {
-		logger.Error("crcWorker", errors.New("getPricesCRC has nil object"))
-		return
-	}
-
-	if len(res) > 0 {
-		store.Set("crc", res)
-	}
+func crcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
+	service.GetPricesCRC()
 	defer wg.Done()
 }
 
-func huobiWorker(wg *sync.WaitGroup, service *services.Service, store setter) {
-	res, err := service.GetPricesHUOBI()
-	if err != nil {
+func huobiWorker(wg *sync.WaitGroup, service *services.GetPrices) {
+	if err := service.GetPricesHUOBI(); err != nil {
 		logger.Error("huobiWorker", err)
 		return
 	}
-	store.Set("huobi", res)
 	defer wg.Done()
 }
 
-func trustV2Worker(wg *sync.WaitGroup, service *services.Service, store setter) {
+func trustV2Worker(wg *sync.WaitGroup, service *services.GetPrices) {
 	var inWG sync.WaitGroup
 	for _, v := range service.TrustV2Coins {
 		inWG.Add(1)
 		go func(inWg *sync.WaitGroup, price services.PricesTrustV2) {
-			got, err := service.GetPricesTrustV2(price)
-			if err != nil {
+			if err := service.GetPricesTrustV2(price); err != nil {
 				logger.Error("trustV2Worker", err)
 				return
 			}
-			store.Set("ntrust", got)
 			defer inWG.Done()
 		}(&inWG, v)
 	}
