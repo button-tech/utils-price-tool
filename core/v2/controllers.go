@@ -5,6 +5,7 @@ import (
 
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
+	"github.com/button-tech/utils-price-tool/services"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -47,10 +48,18 @@ func (c *controller) info(ctx *routing.Context) error {
 	return nil
 }
 
-func supportInfo() handle.APIs {
+func supportInfo() []handle.APIs {
+	var apis []handle.APIs
 	supportedNewTrust := []string{"0", "24"}
-	return handle.APIs{
+	supportedPureCMC := []string{"0", "24", "7d"}
+	apis = append(apis, handle.APIs{
 		Name:             "ntrust",
 		SupportedChanges: supportedNewTrust,
-	}
+		SupportedFiats:   services.TrustV2Coins,
+	}, handle.APIs{
+		Name:             "pcmc",
+		SupportedChanges: supportedPureCMC,
+		SupportedFiats:   services.PureCMCCoins,
+	})
+	return apis
 }
