@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/services"
 	routing "github.com/qiangxue/fasthttp-routing"
@@ -8,12 +9,12 @@ import (
 
 type Provider struct {
 	Store             *cache.Cache
-	GetPrices         *services.Service
+	GetPrices         *services.GetPrices
 	privateCurrencies map[string][]string
 }
 
 type controller struct {
-	getPrices         *services.Service
+	getPrices         *services.GetPrices
 	store             *cache.Cache
 	privateCurrencies map[string][]string
 }
@@ -25,9 +26,11 @@ func API(g *routing.RouteGroup, p *Provider) {
 		privateCurrencies: privateCurrencies(),
 	}
 
-	g.Post("/prices", c.courses)
 	g.Get("/info", c.info)
+	g.Get("/docs/swagger.json", respond.SwaggerJSONHandler(v1))
+	g.Post("/prices", c.courses)
 	g.Post("/change", c.privatePrices)
+
 }
 
 func privateCurrencies() map[string][]string {

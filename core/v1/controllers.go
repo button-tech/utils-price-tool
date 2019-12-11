@@ -1,12 +1,30 @@
 package v1
 
+// Utils-price-tool v1 API.
+//
+// This project is included in Button-Wallet Utils-price-tool project
+//
+//     Schemes: http
+//     Host: localhost
+//     BasePath: /courses/v1/
+//     Version: 0.0.1
+//     Contact: Frolov Ivan <if@buttonwallet.com>
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+// swagger:meta
+
 import (
 	"encoding/json"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"strconv"
 
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
-	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"github.com/pkg/errors"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
@@ -90,30 +108,27 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 	}
 
 	currencies := make([]privateCMC, 0, len(r.Currencies))
-	stored, err := c.store.Get(typeconv.StorageApi("coinMarketCap"))
-	if err != nil {
-		return err
-	}
-
 	for _, symbol := range r.Currencies {
 		currDetail := c.privateCurrencies[symbol]
 
 		bip := currDetail[0]
 		name := currDetail[1]
 
-		val := stored[typeconv.StorageFiat("USD")]
-		details := val[typeconv.StorageCC(bip)]
-		priceInfo, err := coinMarketPricesInfo(details.Price, details.ChangePCT24Hour, details.ChangePCT7Day)
-		if err != nil {
-			return errors.Wrap(err, "privatePrices")
-		}
+		k := cache.GenKey("coinMarketCap", "usd", bip)
+		d, ok := c.store.Get(k)
+		if ok {
+			priceInfo, err := coinMarketPricesInfo(d.Price, d.ChangePCT24Hour, d.ChangePCT7Day)
+			if err != nil {
+				return errors.Wrap(err, "privatePrices")
+			}
 
-		q := priceQuote(&priceInfo)
-		currencies = append(currencies, privateCMC{
-			Name:   name,
-			Symbol: symbol,
-			Quote:  q,
-		})
+			q := priceQuote(&priceInfo)
+			currencies = append(currencies, privateCMC{
+				Name:   name,
+				Symbol: symbol,
+				Quote:  q,
+			})
+		}
 	}
 
 	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": currencies})

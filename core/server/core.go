@@ -19,11 +19,11 @@ type Core struct {
 	G   *routing.RouteGroup
 	Gv2 *routing.RouteGroup
 
-	service *services.Service
+	service *services.GetPrices
 	store   *cache.Cache
 }
 
-func New(store *cache.Cache, service *services.Service) (c *Core) {
+func New(store *cache.Cache, service *services.GetPrices) (c *Core) {
 	c = &Core{
 		R:       routing.New(),
 		store:   store,
