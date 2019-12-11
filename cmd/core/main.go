@@ -16,7 +16,7 @@ import (
 func main() {
 	store := cache.NewCache()
 	getPrices := services.New(store)
-	go tasks.FetchGroup(getPrices, store)
+	go tasks.FetchGroup(getPrices)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)
