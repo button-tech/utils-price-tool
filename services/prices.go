@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/pkg/typeconv"
 	"os"
 	"strconv"
 	"strings"
@@ -17,7 +16,7 @@ import (
 
 const (
 	urlHuobi   = "https://api.hbdm.com/api/v1/contract_index"
-	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&convert=USD"
+	urlTopList = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?convert=USD"
 	urlCRC     = "https://min-api.cryptocompare.com/data/pricemultifull"
 )
 
@@ -29,7 +28,7 @@ var (
 	trustWalletV2URL = os.Getenv("TRUST_URL_V2")
 )
 
-type Service struct {
+type GetPrices struct {
 	mu           sync.Mutex
 	TrustV2Coins []PricesTrustV2
 	List         map[string]string
@@ -38,12 +37,37 @@ type Service struct {
 	store *cache.Cache
 }
 
-type maps struct {
-	FiatMap  cache.FiatMap
-	PriceMap map[cache.CryptoCurrency]*cache.Details
+var PureCMCCoins = map[string]int{
+	"AE":    457,
+	"ALGO":  283,
+	"ATOM":  118,
+	"BCH":   145,
+	"BNB":   714,
+	"BTC":   0,
+	"DASH":  5,
+	"DCR":   42,
+	"DGB":   20,
+	"DOGE":  3,
+	"ETC":   61,
+	"ETH":   60,
+	"ICX":   74,
+	"LTC":   2,
+	"NANO":  165,
+	"ONT":   1024,
+	"QTUM":  2301,
+	"RVN":   175,
+	"THETA": 500,
+	"TRX":   195,
+	"VET":   818,
+	"WAVES": 5741564,
+	"XLM":   148,
+	"XRP":   144,
+	"XTZ":   1729,
+	"ZEC":   133,
+	"ZIL":   313,
 }
 
-var trustV2Coins = map[string]int{
+var TrustV2Coins = map[string]int{
 	"ETH":   60,
 	"ETC":   61,
 	"ICX":   74,
@@ -90,8 +114,8 @@ var trustV2Coins = map[string]int{
 	"DGB":   20,
 }
 
-func New(store *cache.Cache) *Service {
-	return &Service{
+func New(store *cache.Cache) *GetPrices {
+	return &GetPrices{
 		TrustV2Coins: CreateTrustV2RequestData(),
 		List:         make(map[string]string),
 		store:        store,
@@ -102,8 +126,8 @@ func CreateTrustV2RequestData() []PricesTrustV2 {
 	prices := make([]PricesTrustV2, 0, len(currencies))
 	for _, c := range currencies {
 		price := PricesTrustV2{Currency: c}
-		allAssets := make([]Assets, 0, len(trustV2Coins))
-		for _, v := range trustV2Coins {
+		allAssets := make([]Assets, 0, len(TrustV2Coins))
+		for _, v := range TrustV2Coins {
 			allAssets = append(allAssets, Assets{Coin: v, Type: coin})
 		}
 		price.Assets = allAssets
@@ -112,7 +136,7 @@ func CreateTrustV2RequestData() []PricesTrustV2 {
 	return prices
 }
 
-func (s *Service) CreateCMCRequestData() []TokensWithCurrency {
+func (s *GetPrices) CreateCMCRequestData() []TokensWithCurrency {
 	var tokensOneCurrency TokensWithCurrency
 	tokensMultiCurrencies := make([]TokensWithCurrency, 0, len(currencies))
 	tokens := make([]Token, 0, len(s.List))
@@ -135,7 +159,7 @@ func (s *Service) CreateCMCRequestData() []TokensWithCurrency {
 }
 
 // Get top List of crypto-currencies from coin-market
-func (s *Service) GetTopList(c map[string]string) error {
+func (s *GetPrices) GetTopList(c map[string]string) error {
 	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
 		return errors.Wrap(err, "getTopList")
@@ -150,26 +174,23 @@ func (s *Service) GetTopList(c map[string]string) error {
 		return errors.New("responseHTTPStatus: NotOk")
 	}
 
-	ms := storeMapsConstructor()
+	top100 := topList.Data[:100]
 	topListMap := make(map[string]string)
-	for _, item := range topList.Data {
+	for _, item := range top100 {
 		if val, ok := c[item.Symbol]; ok {
 			topListMap[item.Symbol] = val
-
 			pricesData := detailsConversion(
 				item.Quote.USD.Price,
 				item.Quote.USD.PercentChange1H,
 				item.Quote.USD.PercentChange24H,
 				item.Quote.USD.PercentChange7D,
 			)
-			ms.PriceMap[typeconv.StorageCC(val)] = &pricesData
+			k := cache.Key{API: "coinMarketCap", Fiat: item.Symbol, Currency: "usd"}
+			s.store.Set(k, pricesData)
 		}
 	}
-
-	ms.FiatMap[typeconv.StorageFiat("USD")] = ms.PriceMap
-	s.store.Set("coinMarketCap", ms.FiatMap)
+	pureCMCMapping(topList, s.store)
 	s.List = topListMap
-
 	return nil
 }
 
@@ -191,35 +212,26 @@ func floatValid(s float64) bool {
 	return s != 0
 }
 
-func storeMapsConstructor() maps {
-	return maps{
-		FiatMap:  make(cache.FiatMap),
-		PriceMap: make(map[cache.CryptoCurrency]*cache.Details),
-	}
-}
-
-func (s *Service) GetPricesCMC(tokens TokensWithCurrency) (cache.FiatMap, error) {
+func (s *GetPrices) GetPricesCMC(tokens TokensWithCurrency) error {
 	rq, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
-		return nil, errors.Wrap(err, "GetPricesCMC")
+		return errors.Wrap(err, "GetPricesCMC")
 	}
 
 	gotPrices := coinMarketCap{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
-		return nil, errors.Wrap(err, "GetPricesCMC")
+		return errors.Wrap(err, "GetPricesCMC")
 	}
 
-	maps := storeMapsConstructor()
 	for _, v := range gotPrices.Docs {
 		details := cache.Details{}
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
-		maps.PriceMap[typeconv.StorageCC(strings.ToLower(v.Contract))] = &details
+		k := cache.GenKey("cmc", gotPrices.Currency, v.Contract)
+		s.store.Set(k, details)
 	}
-	maps.FiatMap[typeconv.StorageFiat(gotPrices.Currency)] = maps.PriceMap
-
-	return maps.FiatMap, nil
+	return nil
 }
 
 func CreateCRCRequestData() []string {
@@ -238,12 +250,11 @@ func CreateCRCRequestData() []string {
 	return sortedCurrencies
 }
 
-func (s *Service) GetPricesCRC() cache.FiatMap {
+func (s *GetPrices) GetPricesCRC() {
 	var fsyms string
 	for k := range s.List {
 		fsyms += k + ","
 	}
-
 	sortedCurrencies := CreateCRCRequestData()
 	c := make(chan map[string][]cryptoCompare, len(sortedCurrencies))
 
@@ -254,11 +265,10 @@ func (s *Service) GetPricesCRC() cache.FiatMap {
 	}
 	wg.Wait()
 	close(c)
-
-	return fiatMapping(c)
+	fiatMapping(c, s.store)
 }
 
-func (s *Service) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) {
+func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) {
 	var p fastjson.Parser
 	parsed, err := p.ParseBytes(byteRq)
 	if err != nil {
@@ -292,7 +302,7 @@ func (s *Service) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error)
 	return m, nil
 }
 
-func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
+func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
 	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
@@ -313,12 +323,7 @@ func (s *Service) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cr
 	defer wg.Done()
 }
 
-func fiatMapping(c chan map[string][]cryptoCompare) cache.FiatMap {
-	if c == nil {
-		return nil
-	}
-	fiatMap := make(cache.FiatMap)
-
+func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
 	done := false
 	for !done {
 		select {
@@ -328,82 +333,80 @@ func fiatMapping(c chan map[string][]cryptoCompare) cache.FiatMap {
 				break
 			}
 			for k, v := range m {
-				priceMap := make(map[cache.CryptoCurrency]*cache.Details)
-
 				for _, i := range v {
 					details := cache.Details{}
 					details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
 					details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
 					details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
-
-					priceMap[typeconv.StorageCC(strings.ToLower(i.FromSymbol))] = &details
+					k := cache.GenKey("crc", k, i.FromSymbol)
+					store.Set(k, details)
 				}
-
-				if _, ok := fiatMap[typeconv.StorageFiat(k)]; !ok {
-					fiatMap[typeconv.StorageFiat(k)] = map[cache.CryptoCurrency]*cache.Details{}
-				}
-				fiatMap[typeconv.StorageFiat(k)] = priceMap
 			}
 		}
 	}
-
-	return fiatMap
 }
 
-func (s *Service) GetPricesHUOBI() (cache.FiatMap, error) {
+func (s *GetPrices) GetPricesHUOBI() error {
 	rq, err := req.Get(urlHuobi)
 	if err != nil {
-		return nil, errors.Wrap(err, "huobi")
+		return errors.Wrap(err, "huobi")
 	}
 
 	var h huobi
 	if err := rq.ToJSON(&h); err != nil {
-		return nil, errors.Wrap(err, "toJSON huobi")
+		return errors.Wrap(err, "toJSON huobi")
 	}
-	return huobiMapping(&h, s.List), nil
+	huobiMapping(&h, s.List, s.store)
+	return nil
 }
 
-func huobiMapping(h *huobi, list map[string]string) cache.FiatMap {
-	fiatMap := make(cache.FiatMap)
-	priceMap := make(map[cache.CryptoCurrency]*cache.Details)
-
+func huobiMapping(h *huobi, list map[string]string, store *cache.Cache) {
 	for _, i := range h.Data {
 		if val, ok := list[i.Symbol]; ok {
 			var details cache.Details
 			details.Price = strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
-			priceMap[typeconv.StorageCC(strings.ToLower(val))] = &details
-			fiatMap[typeconv.StorageFiat("USD")] = priceMap
+			k := cache.GenKey("huobi", "usd", val)
+			store.Set(k, details)
 		}
 	}
-	return fiatMap
 }
 
-func (s *Service) GetPricesTrustV2(prices PricesTrustV2) (cache.FiatMap, error) {
+func (s *GetPrices) GetPricesTrustV2(prices PricesTrustV2) error {
 	rq := req.New()
 	resp, err := rq.Post(trustWalletV2URL, req.BodyJSON(&prices))
 	if err != nil {
-		return nil, errors.Wrap(err, "GetPricesTrustV2")
+		return errors.Wrap(err, "GetPricesTrustV2")
 	}
 
 	var r trustV2Response
 	if err := resp.ToJSON(&r); err != nil {
-		return nil, errors.Wrap(err, "GetPricesTrustV2toJSON")
+		return errors.Wrap(err, "GetPricesTrustV2toJSON")
 	}
-
-	m := trustV2FiatMap(&r)
-	return m, nil
+	trustV2FiatMap(&r, s.store)
+	return nil
 }
 
-func trustV2FiatMap(r *trustV2Response) cache.FiatMap {
-	m := make(cache.FiatMap)
-	currency := typeconv.StorageFiat(r.Currency)
-	m[currency] = map[cache.CryptoCurrency]*cache.Details{}
+func trustV2FiatMap(r *trustV2Response, store *cache.Cache) {
 	for _, doc := range r.Docs {
-		coin := typeconv.StorageCC(strconv.Itoa(doc.Coin))
-
+		coin := strconv.Itoa(doc.Coin)
 		sd := detailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
-		m[currency][coin] = &sd
+		k := cache.GenKey("ntrust", r.Currency, coin)
+		store.Set(k, sd)
 	}
+}
 
-	return m
+func pureCMCMapping(pure pureCoinMarketCap, store *cache.Cache) {
+	for _, v := range pure.Data {
+		if coinID, ok := TrustV2Coins[v.Symbol]; ok {
+			pricesData := detailsConversion(
+				v.Quote.USD.Price,
+				v.Quote.USD.PercentChange1H,
+				v.Quote.USD.PercentChange24H,
+				v.Quote.USD.PercentChange7D,
+			)
+			convCoinID := strconv.Itoa(coinID)
+			k := cache.GenKey("pcmc", "usd", convCoinID)
+			store.Set(k, pricesData)
+		}
+	}
 }
