@@ -1,19 +1,13 @@
 package cache
 
 import (
-	"errors"
+	"fmt"
+	"strings"
 	"sync"
 )
 
-type Api string
-
-type CryptoCurrency string
-
-type Fiat string
-
-type FiatMap map[Fiat]map[CryptoCurrency]*Details
-
-type Stored map[Api]FiatMap
+// key is "api_usd_currency"
+type stored map[string]Details
 
 type Details struct {
 	Price           string
@@ -24,35 +18,43 @@ type Details struct {
 
 type Cache struct {
 	sync.RWMutex
-	items Stored
+	items stored
+}
+
+type Key struct {
+	API      string
+	Fiat     string
+	Currency string
 }
 
 func NewCache() *Cache {
 	return &Cache{
-		items: make(Stored),
+		items: make(stored),
 	}
 }
 
-func (c *Cache) Set(a Api, f FiatMap) {
+func (c *Cache) Set(k Key, d Details) {
 	c.Lock()
-
-	if _, ok := c.items[a]; !ok {
-		c.items[a] = map[Fiat]map[CryptoCurrency]*Details{}
+	if _, ok := c.items[key(k)]; !ok {
+		c.items[key(k)] = d
 	}
-
-	for k, v := range f {
-		c.items[a][k] = v
-	}
-
 	c.Unlock()
 }
 
-func (c *Cache) Get(a Api) (f FiatMap, err error) {
+func GenKey(a, f, c string) Key {
+	return Key{API: strings.ToLower(a), Fiat: strings.ToLower(f), Currency: strings.ToLower(c)}
+}
+
+func key(k Key) string {
+	return fmt.Sprintf("%s_%s_%s", k.API, k.Fiat, k.Currency)
+}
+
+func (c *Cache) Get(k Key) (d Details, ok bool) {
 	c.RLock()
-	f = c.items[a]
-	if f == nil {
-		err = errors.New("cache: nil")
+	defer c.RUnlock()
+	d, ok = c.items[key(k)]
+	if !ok {
+		return Details{}, false
 	}
-	c.RUnlock()
 	return
 }
