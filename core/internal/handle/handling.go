@@ -129,23 +129,30 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Respon
 	return result, nil
 }
 
-func changesControl(m map[string]string, d *cache.Details, c string) error {
+func changesControl(m map[string]string, d *cache.Details, c string) (err error) {
+	err = errors.New("API changes: no matches")
 	switch c {
 	case "0", "":
 	case "1":
 		if d.ChangePCTHour != "" {
 			m["percent_change"] = d.ChangePCTHour
+		} else {
+			return
 		}
 	case "24":
 		if d.ChangePCT24Hour != "" {
 			m["percent_change"] = d.ChangePCT24Hour
+		} else {
+			return
 		}
 	case "7d":
 		if d.ChangePCT7Day != "" {
 			m["percent_change"] = d.ChangePCT7Day
+		} else {
+			return
 		}
 	default:
-		return errors.New("API changes: no matches")
+		return
 	}
 	return nil
 }
