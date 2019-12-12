@@ -119,6 +119,9 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Respon
 					return nil, err
 				}
 				price.Rates = append(price.Rates, contract)
+
+				// test variant
+				store.Delete(k)
 			}
 		}
 		if price.Currency != "" {

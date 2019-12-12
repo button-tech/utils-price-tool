@@ -35,9 +35,7 @@ func NewCache() *Cache {
 
 func (c *Cache) Set(k Key, d Details) {
 	c.Lock()
-	if _, ok := c.items[key(k)]; !ok {
-		c.items[key(k)] = d
-	}
+	c.items[key(k)] = d
 	c.Unlock()
 }
 
@@ -57,4 +55,10 @@ func (c *Cache) Get(k Key) (d Details, ok bool) {
 		return Details{}, false
 	}
 	return
+}
+
+func (c *Cache) Delete(k Key) {
+	c.Lock()
+	delete(c.items, key(k))
+	c.Unlock()
 }
