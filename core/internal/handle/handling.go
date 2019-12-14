@@ -84,7 +84,7 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Respon
 				}
 				price.Rates = append(price.Rates, contract)
 			} else {
-				if s != nil {
+				if s != nil && u.API == "cmc" {
 					tokens.Tokens = append(tokens.Tokens, services.Token{Contract: t})
 				}
 			}
