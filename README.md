@@ -5,6 +5,24 @@ The main feature is support of trust-wallet requests.
 ```
                                     Version v2
 ```
+Method GET:
+
+```
+Single courses:
+
+/courses/v2/erc20/token/fiat
+/courses/v2/crypto/fiat
+```
+
+```
+Response:
+```
+```
+{
+    "price": "6436.14"
+}
+```
+
 Method POST:
 
 ```/courses/v2/prices```
