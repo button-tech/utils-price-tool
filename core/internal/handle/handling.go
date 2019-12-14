@@ -132,6 +132,25 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Respon
 	return result, nil
 }
 
+func SingleERC20Course(fiat, token string, s *services.GetPrices) (string, error) {
+	t := makeSingleToken(fiat, token)
+	price, err := s.GetTokenPriceCMC(t)
+	if err != nil {
+		return "", err
+	}
+	return price, nil
+}
+
+func makeSingleToken(fiat, crypto string) services.TokensWithCurrency {
+	token := make([]services.Token, 0, 1)
+	token = append(token, services.Token{Contract: crypto})
+
+	return services.TokensWithCurrency{
+		Currency: fiat,
+		Tokens:   token,
+	}
+}
+
 func changesControl(m map[string]string, d *cache.Details, c string) (err error) {
 	err = errors.New("API changes: no matches")
 	switch c {

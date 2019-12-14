@@ -234,6 +234,21 @@ func (s *GetPrices) GetPricesCMC(tokens TokensWithCurrency) error {
 	return nil
 }
 
+func (s *GetPrices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
+	rq, err := req.Post(trustWalletURL, req.BodyJSON(token))
+	if err != nil {
+		return "", errors.Wrap(err, "GetPricesCMC")
+	}
+
+	gotPrices := coinMarketCap{}
+	if err = rq.ToJSON(&gotPrices); err != nil {
+		return "", errors.Wrap(err, "GetPricesCMC")
+	}
+
+	doc := gotPrices.Docs[0]
+	return doc.Price, nil
+}
+
 func CreateCRCRequestData() []string {
 	sortedCurrencies := make([]string, 0, 7)
 	n := 0
@@ -288,11 +303,12 @@ func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, erro
 					return
 				}
 
-				c.FromSymbol = val
 				valM, okM := m[c.ToSymbol]
 				if !okM {
 					m[c.ToSymbol] = make([]cryptoCompare, 0)
 				}
+				valM = append(valM, c)
+				formatCryptoCompare(&c, val)
 				valM = append(valM, c)
 				m[c.ToSymbol] = valM
 			})
@@ -300,6 +316,10 @@ func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, erro
 	})
 
 	return m, nil
+}
+
+func formatCryptoCompare(c *cryptoCompare, from string) {
+	c.FromSymbol = from
 }
 
 func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
@@ -405,8 +425,8 @@ func pureCMCMapping(pure pureCoinMarketCap, store *cache.Cache) {
 				v.Quote.USD.PercentChange7D,
 			)
 			convCoinID := strconv.Itoa(coinID)
-			k := cache.GenKey("pcmc", "usd", convCoinID)
-			store.Set(k, pricesData)
+			kt := cache.GenKey("pcmc", "usd", convCoinID)
+			store.Set(kt, pricesData)
 		}
 	}
 }

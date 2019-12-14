@@ -34,7 +34,7 @@ func New(store *cache.Cache, service *services.GetPrices) (c *Core) {
 	c.fs()
 
 	v1.API(c.G, &v1.Provider{Store: c.store, GetPrices: c.service})
-	v2.API(c.Gv2, &v2.Provider{Store: c.store})
+	v2.API(c.Gv2, &v2.Provider{Store: c.store, GetPrices: c.service})
 	return
 }
 
