@@ -111,10 +111,10 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 	for _, symbol := range r.Currencies {
 		currDetail := c.privateCurrencies[symbol]
 
-		bip := currDetail[0]
+		//	bip := currDetail[0]
 		name := currDetail[1]
 
-		k := cache.GenKey("coinMarketCap", "usd", bip)
+		k := cache.GenKey("coinMarketCap", "usd", symbol)
 		d, ok := c.store.Get(k)
 		if ok {
 			priceInfo, err := coinMarketPricesInfo(d.Price, d.ChangePCT24Hour, d.ChangePCT7Day)

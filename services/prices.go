@@ -185,7 +185,7 @@ func (s *GetPrices) GetTopList(c map[string]string) error {
 				item.Quote.USD.PercentChange24H,
 				item.Quote.USD.PercentChange7D,
 			)
-			k := cache.Key{API: "coinMarketCap", Fiat: item.Symbol, Currency: "usd"}
+			k := cache.GenKey("coinMarketCap", "usd", item.Symbol)
 			s.store.Set(k, pricesData)
 		}
 	}
@@ -291,7 +291,6 @@ func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, erro
 	}
 
 	m := make(map[string][]cryptoCompare)
-
 	o := parsed.GetObject("RAW")
 	o.Visit(func(k []byte, v *fastjson.Value) {
 		if val, ok := s.List[string(k)]; ok {
@@ -302,7 +301,6 @@ func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, erro
 					logger.Error("o.Visit", err)
 					return
 				}
-
 				valM, okM := m[c.ToSymbol]
 				if !okM {
 					m[c.ToSymbol] = make([]cryptoCompare, 0)
@@ -314,7 +312,6 @@ func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, erro
 			})
 		}
 	})
-
 	return m, nil
 }
 
@@ -327,6 +324,7 @@ func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]
 		"fsyms": fsyms,
 		"tsyms": tsyms,
 	})
+
 	if err != nil {
 		logger.Error("crcPricesRequest", err)
 		return
