@@ -2,10 +2,11 @@ package slip0044
 
 import (
 	"fmt"
-	"github.com/button-tech/bip44"
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/button-tech/bip44"
 )
 
 type TrustWalletSlips struct {

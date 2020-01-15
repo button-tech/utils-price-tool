@@ -1,35 +1,28 @@
 package main
 
 import (
-	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"github.com/button-tech/utils-price-tool/api"
+	"github.com/button-tech/logger"
+	core "github.com/button-tech/utils-price-tool/core/server"
 	"github.com/button-tech/utils-price-tool/services"
-	"github.com/button-tech/utils-price-tool/storage"
 	"github.com/button-tech/utils-price-tool/tasks"
-	"github.com/valyala/fasthttp"
 )
 
 func main() {
-	store := storage.NewCache()
-	go tasks.NewGetGroup(services.New(store), store)
+	store := cache.NewCache()
+	getPrices := services.New(store)
+	go tasks.FetchGroup(getPrices)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)
 	}
 
-	s := api.NewServer(store)
-	server := fasthttp.Server{
-		Handler:      s.R.HandleRequest,
-		ReadTimeout:  time.Second * 30,
-		WriteTimeout: time.Second * 30,
-	}
-
+	c := core.New(store, getPrices)
 	signalEx := make(chan os.Signal, 1)
 	defer close(signalEx)
 
@@ -40,12 +33,12 @@ func main() {
 		syscall.SIGQUIT)
 
 	go func() {
-		if err := server.ListenAndServe(":5000"); err != nil {
+		if err := c.S.ListenAndServe(":5000"); err != nil {
 			logger.Fatal(err)
 		}
 	}()
 	defer func() {
-		if err := server.Shutdown(); err != nil {
+		if err := c.S.Shutdown(); err != nil {
 			logger.Fatal(err)
 		}
 	}()
@@ -53,5 +46,4 @@ func main() {
 	stop := <-signalEx
 	logger.Info("Received", stop)
 	logger.Info("Waiting for all jobs to stop")
-
 }

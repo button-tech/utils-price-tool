@@ -37,22 +37,6 @@ type cryptoCompare struct {
 	ChangePCTHour   float64 `json:"CHANGEPCTHOUR"`
 }
 
-type topList struct {
-	Status struct {
-		Timestamp    time.Time   `json:"timestamp"`
-		ErrorCode    int         `json:"error_code"`
-		ErrorMessage interface{} `json:"error_message"`
-	} `json:"status"`
-	Data []data `json:"data"`
-}
-
-type data struct {
-	ID     int    `json:"id"`
-	Name   string `json:"name"`
-	Symbol string `json:"symbol"`
-	Slug   string `json:"slug"`
-}
-
 type huobi struct {
 	Status string `json:"status"`
 	Data   []struct {
@@ -63,17 +47,7 @@ type huobi struct {
 	Ts int64 `json:"ts"`
 }
 
-type coinBase []struct {
-	ID            string `json:"id"`
-	BaseCurrency  string `json:"base_currency"`
-	QuoteCurrency string `json:"quote_currency"`
-}
-
-type coinBaseEachPrice struct {
-	Open string `json:"open"`
-}
-
-type realCoinMarketCap struct {
+type pureCoinMarketCap struct {
 	Status struct {
 		ErrorCode    int         `json:"error_code"`
 		ErrorMessage interface{} `json:"error_message"`
@@ -93,3 +67,26 @@ type realCoinMarketCap struct {
 	} `json:"data"`
 }
 
+type PricesTrustV2 struct {
+	Currency string   `json:"currency"`
+	Assets   []Assets `json:"Assets"`
+}
+
+type Assets struct {
+	Coin    int    `json:"coin"`
+	Type    string `json:"type"`
+	TokenID string `json:"token_id,-"`
+}
+
+type trustV2Response struct {
+	Currency string `json:"currency"`
+	Docs     []struct {
+		Coin  int    `json:"coin"`
+		Type  string `json:"type"`
+		Price struct {
+			Value     float64 `json:"value"`
+			Change24H float64 `json:"change_24h"`
+		} `json:"price"`
+		LastUpdate time.Time `json:"last_update"`
+	} `json:"docs"`
+}
