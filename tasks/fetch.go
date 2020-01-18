@@ -10,9 +10,9 @@ import (
 	"github.com/button-tech/utils-price-tool/services"
 )
 
-type worker func(wg *sync.WaitGroup, service *services.GetPrices)
+type worker func(wg *sync.WaitGroup, prices *services.Prices)
 
-func FetchGroup(service *services.GetPrices) {
+func FetchGroup(p *services.Prices) {
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
 		logger.Error("AddTrustHexBySlip", err)
@@ -24,14 +24,14 @@ func FetchGroup(service *services.GetPrices) {
 	t := time.NewTicker(time.Minute * 7)
 	for ; true; <-t.C {
 		start := time.Now()
-		if err := service.GetTopList(converted); err != nil {
+		if err := p.GetTopList(converted); err != nil {
 			logger.Error("GetTopList", err)
 			continue
 		}
 
 		for _, worker := range ws {
 			wg.Add(1)
-			go worker(&wg, service)
+			go worker(&wg, p)
 		}
 
 		logger.Info("Count goroutines: ", runtime.NumGoroutine())
@@ -51,16 +51,16 @@ func workers() []worker {
 	}
 }
 
-func cmcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
+func cmcWorker(wg *sync.WaitGroup, p *services.Prices) {
 	defer wg.Done()
-	tokens := service.CreateCMCRequestData()
+	tokens := p.CreateCMCRequestData()
 
 	var tokensWG sync.WaitGroup
 	for _, t := range tokens {
 		tokensWG.Add(1)
 		go func(token services.TokensWithCurrency, tWG *sync.WaitGroup) {
 			defer tWG.Done()
-			if err := service.GetPricesCMC(token); err != nil {
+			if err := p.SetPricesCMC(token); err != nil {
 				logger.Error("cmcWorker", err)
 				return
 			}
@@ -69,27 +69,27 @@ func cmcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
 	tokensWG.Wait()
 }
 
-func crcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
+func crcWorker(wg *sync.WaitGroup, p *services.Prices) {
 	defer wg.Done()
-	service.GetPricesCRC()
+	p.SetPricesCRC()
 }
 
-func huobiWorker(wg *sync.WaitGroup, service *services.GetPrices) {
+func huobiWorker(wg *sync.WaitGroup, p *services.Prices) {
 	defer wg.Done()
-	if err := service.GetPricesHUOBI(); err != nil {
+	if err := p.PricesHUOBI(); err != nil {
 		logger.Error("huobiWorker", err)
 		return
 	}
 }
 
-func trustV2Worker(wg *sync.WaitGroup, service *services.GetPrices) {
+func trustV2Worker(wg *sync.WaitGroup, p *services.Prices) {
 	defer wg.Done()
 	var inWG sync.WaitGroup
-	for _, v := range service.TrustV2Coins {
+	for _, v := range p.TrustV2Coins {
 		inWG.Add(1)
 		go func(inWg *sync.WaitGroup, price services.PricesTrustV2) {
 			defer inWG.Done()
-			if err := service.GetPricesTrustV2(price); err != nil {
+			if err := p.PricesTrustV2(price); err != nil {
 				logger.Error("trustV2Worker", err)
 				return
 			}

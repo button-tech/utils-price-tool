@@ -28,7 +28,7 @@ var (
 	trustWalletV2URL = os.Getenv("TRUST_URL_V2")
 )
 
-type GetPrices struct {
+type Prices struct {
 	TrustV2Coins []PricesTrustV2
 	List         map[string]string
 	Tokens       map[string]string
@@ -113,8 +113,8 @@ var TrustV2Coins = map[string]int{
 	"DGB":   20,
 }
 
-func New(store *cache.Cache) *GetPrices {
-	return &GetPrices{
+func New(store *cache.Cache) *Prices {
+	return &Prices{
 		TrustV2Coins: CreateTrustV2RequestData(),
 		List:         make(map[string]string),
 		store:        store,
@@ -135,16 +135,16 @@ func CreateTrustV2RequestData() []PricesTrustV2 {
 	return prices
 }
 
-func (s *GetPrices) CreateCMCRequestData() []TokensWithCurrency {
+func (p *Prices) CreateCMCRequestData() []TokensWithCurrency {
 	var tokensOneCurrency TokensWithCurrency
 	tokensMultiCurrencies := make([]TokensWithCurrency, 0, len(currencies))
-	tokens := make([]Token, 0, len(s.List))
+	tokens := make([]Token, 0, len(p.List))
 
-	for _, c := range s.List {
+	for _, c := range p.List {
 		tokens = append(tokens, Token{Contract: c})
 	}
 
-	for _, t := range s.Tokens {
+	for _, t := range p.Tokens {
 		tokens = append(tokens, Token{Contract: t})
 	}
 	tokensOneCurrency.Tokens = tokens
@@ -158,7 +158,7 @@ func (s *GetPrices) CreateCMCRequestData() []TokensWithCurrency {
 }
 
 // Get top List of crypto-currencies from coin-market
-func (s *GetPrices) GetTopList(c map[string]string) error {
+func (p *Prices) GetTopList(c map[string]string) error {
 	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
 		return errors.Wrap(err, "getTopList")
@@ -185,11 +185,11 @@ func (s *GetPrices) GetTopList(c map[string]string) error {
 				item.Quote.USD.PercentChange7D,
 			)
 			k := cache.GenKey("coinMarketCap", "usd", item.Symbol)
-			s.store.Set(k, pricesData)
+			p.store.Set(k, pricesData)
 		}
 	}
-	pureCMCMapping(topList, s.store)
-	s.List = topListMap
+	pureCMCMapping(topList, p.store)
+	p.List = topListMap
 	return nil
 }
 
@@ -211,15 +211,15 @@ func floatValid(s float64) bool {
 	return s != 0
 }
 
-func (s *GetPrices) GetPricesCMC(tokens TokensWithCurrency) error {
+func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
 	rq, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
-		return errors.Wrap(err, "GetPricesCMC")
+		return errors.Wrap(err, "PricesCMC")
 	}
 
 	gotPrices := coinMarketCap{}
 	if err = rq.ToJSON(&gotPrices); err != nil {
-		return errors.Wrap(err, "GetPricesCMC")
+		return errors.Wrap(err, "PricesCMC")
 	}
 
 	for _, v := range gotPrices.Docs {
@@ -228,23 +228,28 @@ func (s *GetPrices) GetPricesCMC(tokens TokensWithCurrency) error {
 		details.ChangePCT24Hour = v.PercentChange24H
 
 		k := cache.GenKey("cmc", gotPrices.Currency, v.Contract)
-		s.store.Set(k, details)
+		p.store.Set(k, details)
 	}
 	return nil
 }
 
-func (s *GetPrices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
-	rq, err := req.Post(trustWalletURL, req.BodyJSON(token))
+func (p *Prices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
+	res, err := req.Post(trustWalletURL, req.BodyJSON(token))
 	if err != nil {
-		return "", errors.Wrap(err, "GetPricesCMC")
+		return "", errors.Wrap(err, "PricesCMC")
+	}
+
+	if res.Response().StatusCode != 200 {
+		return "", errors.Wrap(errors.New("error"), "PricesCMC")
 	}
 
 	gotPrices := coinMarketCap{}
-	if err = rq.ToJSON(&gotPrices); err != nil {
-		return "", errors.Wrap(err, "GetPricesCMC")
+	if err = res.ToJSON(&gotPrices); err != nil {
+		return "", errors.Wrap(err, "PricesCMC")
 	}
 
 	doc := gotPrices.Docs[0]
+
 	return doc.Price, nil
 }
 
@@ -264,63 +269,72 @@ func CreateCRCRequestData() []string {
 	return sortedCurrencies
 }
 
-func (s *GetPrices) GetPricesCRC() {
+func (p *Prices) SetPricesCRC() {
 	var fsyms string
-	for k := range s.List {
+	for k := range p.List {
 		fsyms += k + ","
 	}
 	sortedCurrencies := CreateCRCRequestData()
 	c := make(chan map[string][]cryptoCompare, len(sortedCurrencies))
 
 	var wg sync.WaitGroup
+	wg.Add(len(sortedCurrencies))
 	for _, tsyms := range sortedCurrencies {
-		wg.Add(1)
-		go s.crcPricesRequest(tsyms, fsyms, c, &wg)
+		go p.crcPricesRequest(tsyms, fsyms, c, &wg)
 	}
 	wg.Wait()
 	close(c)
-	fiatMapping(c, s.store)
+
+	fiatMapping(c, p.store)
 }
 
-func (s *GetPrices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) {
-	var p fastjson.Parser
-	parsed, err := p.ParseBytes(byteRq)
+func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) {
+	var parser fastjson.Parser
+
+	parsed, err := parser.ParseBytes(byteRq)
 	if err != nil {
 		return nil, errors.Wrap(err, "crcFastJson")
 	}
 
-	m := make(map[string][]cryptoCompare)
-	o := parsed.GetObject("RAW")
-	o.Visit(func(k []byte, v *fastjson.Value) {
-		if val, ok := s.List[string(k)]; ok {
-			crypto := v.GetObject()
+	cryptoCompareDict := make(map[string][]cryptoCompare)
+
+	rawObject := parsed.GetObject("RAW")
+
+	rawObject.Visit(func(key []byte, value *fastjson.Value) {
+		if obj, ok := p.List[string(key)]; ok {
+			crypto := value.GetObject()
+
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
+
 				var c cryptoCompare
+
 				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
 					logger.Error("o.Visit", err)
 					return
 				}
-				valM, okM := m[c.ToSymbol]
-				if !okM {
-					m[c.ToSymbol] = make([]cryptoCompare, 0)
+
+				result, ok := cryptoCompareDict[c.ToSymbol]
+				if !ok {
+					cryptoCompareDict[c.ToSymbol] = make([]cryptoCompare, 0)
 				}
-				valM = append(valM, c)
-				formatCryptoCompare(&c, val)
-				valM = append(valM, c)
-				m[c.ToSymbol] = valM
+
+				result = append(result, c)
+
+				c.FromSymbol = obj
+
+				result = append(result, c)
+
+				cryptoCompareDict[c.ToSymbol] = result
 			})
 		}
 	})
-	return m, nil
+
+	return cryptoCompareDict, nil
 }
 
-func formatCryptoCompare(c *cryptoCompare, from string) {
-	c.FromSymbol = from
-}
-
-func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
+func (p *Prices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
 	defer wg.Done()
-	rq, err := req.Get(urlCRC, req.Param{
+	res, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
 	})
@@ -330,14 +344,18 @@ func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]
 		return
 	}
 
-	byteRq := rq.Bytes()
-	m, err := s.crcFastJson(byteRq)
+	if res.Response().StatusCode != 200 {
+		logger.Error("crcPricesRequest", err)
+		return
+	}
+
+	result, err := p.crcFastJson(res.Bytes())
 	if err != nil {
 		logger.Error("crcPricesRequest", err)
 		return
 	}
 
-	c <- m
+	c <- result
 }
 
 func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
@@ -359,67 +377,100 @@ func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
 	}
 }
 
-func (s *GetPrices) GetPricesHUOBI() error {
-	rq, err := req.Get(urlHuobi)
+func (p *Prices) PricesHUOBI() error {
+	res, err := req.Get(urlHuobi)
 	if err != nil {
 		return errors.Wrap(err, "huobi")
 	}
 
+	if res.Response().StatusCode != 200 {
+		return errors.Wrap(errors.New("error"), "huobi")
+	}
+
 	var h huobi
-	if err := rq.ToJSON(&h); err != nil {
+
+	if err := res.ToJSON(&h); err != nil {
 		return errors.Wrap(err, "toJSON huobi")
 	}
-	huobiMapping(&h, s.List, s.store)
+
+	huobiMapping(&h, p.List, p.store)
+
 	return nil
 }
 
-func huobiMapping(h *huobi, list map[string]string, store *cache.Cache) {
-	for _, i := range h.Data {
-		if val, ok := list[i.Symbol]; ok {
-			var details cache.Details
-			details.Price = strconv.FormatFloat(i.IndexPrice, 'f', -1, 64)
-			k := cache.GenKey("huobi", "usd", val)
-			store.Set(k, details)
-		}
-	}
-}
-
-func (s *GetPrices) GetPricesTrustV2(prices PricesTrustV2) error {
+func (p *Prices) PricesTrustV2(prices PricesTrustV2) error {
 	rq := req.New()
-	resp, err := rq.Post(trustWalletV2URL, req.BodyJSON(&prices))
+	res, err := rq.Post(trustWalletV2URL, req.BodyJSON(&prices))
+
 	if err != nil {
-		return errors.Wrap(err, "GetPricesTrustV2")
+		return errors.Wrap(err, "PricesTrustV2")
 	}
 
-	var r trustV2Response
-	if err := resp.ToJSON(&r); err != nil {
-		return errors.Wrap(err, "GetPricesTrustV2toJSON")
+	if res.Response().StatusCode != 200 {
+		return errors.Wrap(errors.New("error"), "PricesTrustV2")
 	}
-	trustV2FiatMap(&r, s.store)
+
+	var trustRes trustV2Response
+
+	if err := res.ToJSON(&trustRes); err != nil {
+		return errors.Wrap(err, "PricesTrustV2toJSON")
+	}
+
+	trustV2FiatMap(&trustRes, p.store)
+
 	return nil
 }
 
 func trustV2FiatMap(r *trustV2Response, store *cache.Cache) {
+	var wg sync.WaitGroup
+	wg.Add(len(r.Docs))
 	for _, doc := range r.Docs {
-		coin := strconv.Itoa(doc.Coin)
-		sd := detailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
-		k := cache.GenKey("ntrust", r.Currency, coin)
-		store.Set(k, sd)
+		go func(doc trustDoc, wg *sync.WaitGroup) {
+			defer wg.Done()
+			coin := strconv.Itoa(doc.Coin)
+			sd := detailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
+			k := cache.GenKey("ntrust", r.Currency, coin)
+			store.Set(k, sd)
+		}(doc, &wg)
 	}
+	wg.Wait()
 }
 
 func pureCMCMapping(pure pureCoinMarketCap, store *cache.Cache) {
+	var wg sync.WaitGroup
+	wg.Add(len(pure.Data))
 	for _, v := range pure.Data {
-		if coinID, ok := TrustV2Coins[v.Symbol]; ok {
-			pricesData := detailsConversion(
-				v.Quote.USD.Price,
-				v.Quote.USD.PercentChange1H,
-				v.Quote.USD.PercentChange24H,
-				v.Quote.USD.PercentChange7D,
-			)
-			convCoinID := strconv.Itoa(coinID)
-			kt := cache.GenKey("pcmc", "usd", convCoinID)
-			store.Set(kt, pricesData)
-		}
+		go func(v CmcData, wg *sync.WaitGroup) {
+			defer wg.Done()
+			if coinID, ok := TrustV2Coins[v.Symbol]; ok {
+				pricesData := detailsConversion(
+					v.Quote.USD.Price,
+					v.Quote.USD.PercentChange1H,
+					v.Quote.USD.PercentChange24H,
+					v.Quote.USD.PercentChange7D,
+				)
+				convCoinID := strconv.Itoa(coinID)
+				kt := cache.GenKey("pcmc", "usd", convCoinID)
+				store.Set(kt, pricesData)
+			}
+		}(v, &wg)
 	}
+	wg.Wait()
+}
+
+func huobiMapping(h *huobi, list map[string]string, store *cache.Cache) {
+	var wg sync.WaitGroup
+	wg.Add(len(h.Data))
+	for _, v := range h.Data {
+		go func(v huobiData, wg *sync.WaitGroup) {
+			if val, ok := list[v.Symbol]; ok {
+				defer wg.Done()
+				var details cache.Details
+				details.Price = strconv.FormatFloat(v.IndexPrice, 'f', -1, 64)
+				k := cache.GenKey("huobi", "usd", val)
+				store.Set(k, details)
+			}
+		}(v, &wg)
+	}
+	wg.Wait()
 }

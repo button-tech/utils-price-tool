@@ -43,7 +43,7 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, store *cache.Cache, s *services.GetPrices) ([]Response, error) {
+func Reply(u *UniqueData, v string, store *cache.Cache, s *services.Prices) ([]Response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
@@ -67,7 +67,7 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Response, error) {
+func mapping(u *UniqueData, store *cache.Cache, s *services.Prices) ([]Response, error) {
 	result := make([]Response, 0, len(u.Currencies))
 
 	var wg sync.WaitGroup
@@ -96,7 +96,7 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Respon
 		if s != nil && len(tokens.Tokens) > 0 {
 			wg.Add(1)
 			go func(wg *sync.WaitGroup, store *cache.Cache) {
-				if err := s.GetPricesCMC(tokens); err != nil {
+				if err := s.SetPricesCMC(tokens); err != nil {
 					log.Println(err)
 				}
 				wg.Done()
@@ -132,9 +132,8 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.GetPrices) ([]Respon
 	return result, nil
 }
 
-func SingleERC20Course(fiat, token string, s *services.GetPrices) (string, error) {
-	t := makeSingleToken(fiat, token)
-	price, err := s.GetTokenPriceCMC(t)
+func SingleERC20Course(fiat, token string, s *services.Prices) (string, error) {
+	price, err := s.GetTokenPriceCMC(makeSingleToken(fiat, token))
 	if err != nil {
 		return "", err
 	}

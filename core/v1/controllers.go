@@ -62,8 +62,10 @@ type coinMarketPrices struct {
 
 func (c *controller) courses(ctx *routing.Context) error {
 	const funcName = "courses"
-	var r handle.Data
-	if err := json.Unmarshal(ctx.PostBody(), &r); err != nil {
+
+	var data handle.Data
+
+	if err := json.Unmarshal(ctx.PostBody(), &data); err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v1,
 			Func:    funcName,
@@ -73,8 +75,8 @@ func (c *controller) courses(ctx *routing.Context) error {
 		return nil
 	}
 
-	unique := handle.Unify(&r)
-	resp, err := handle.Reply(&unique, v1, c.store, c.getPrices)
+	uniqueData := handle.Unify(&data)
+	res, err := handle.Reply(&uniqueData, v1, c.store, c.prices)
 	if err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v1,
@@ -85,7 +87,7 @@ func (c *controller) courses(ctx *routing.Context) error {
 		return nil
 	}
 
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": resp})
+	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": res})
 	return nil
 }
 
@@ -96,8 +98,10 @@ func (c *controller) info(ctx *routing.Context) error {
 
 func (c *controller) privatePrices(ctx *routing.Context) error {
 	const funcName = "privatePrices"
-	var r privateInputCurrencies
-	if err := json.Unmarshal(ctx.PostBody(), &r); err != nil {
+
+	var pr privateInputCurrencies
+
+	if err := json.Unmarshal(ctx.PostBody(), &pr); err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v1,
 			Func:    funcName,
@@ -107,8 +111,8 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 		return nil
 	}
 
-	currencies := make([]privateCMC, 0, len(r.Currencies))
-	for _, symbol := range r.Currencies {
+	currencies := make([]privateCMC, 0, len(pr.Currencies))
+	for _, symbol := range pr.Currencies {
 		currDetail := c.privateCurrencies[symbol]
 
 		//	bip := currDetail[0]
@@ -122,12 +126,14 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 				return errors.Wrap(err, "privatePrices")
 			}
 
-			q := priceQuote(&priceInfo)
+			quote := priceQuote(&priceInfo)
+
 			currencies = append(currencies, privateCMC{
 				Name:   name,
 				Symbol: symbol,
-				Quote:  q,
+				Quote:  quote,
 			})
+
 		}
 	}
 

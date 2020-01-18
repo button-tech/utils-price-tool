@@ -8,12 +8,12 @@ import (
 )
 
 type Provider struct {
-	Store     *cache.Cache
-	GetPrices *services.GetPrices
+	Store  *cache.Cache
+	Prices *services.Prices
 }
 
 type controller struct {
-	getPrices         *services.GetPrices
+	prices            *services.Prices
 	store             *cache.Cache
 	privateCurrencies map[string][]string
 }
@@ -21,7 +21,7 @@ type controller struct {
 func API(g *routing.RouteGroup, p *Provider) {
 	c := controller{
 		store:             p.Store,
-		getPrices:         p.GetPrices,
+		prices:            p.Prices,
 		privateCurrencies: privateCurrencies(),
 	}
 

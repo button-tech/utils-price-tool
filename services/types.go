@@ -38,13 +38,15 @@ type cryptoCompare struct {
 }
 
 type huobi struct {
-	Status string `json:"status"`
-	Data   []struct {
-		Symbol     string  `json:"symbol"`
-		IndexPrice float64 `json:"index_price"`
-		IndexTs    int64   `json:"index_ts"`
-	} `json:"data"`
-	Ts int64 `json:"ts"`
+	Status string      `json:"status"`
+	Data   []huobiData `json:"data"`
+	Ts     int64       `json:"ts"`
+}
+
+type huobiData struct {
+	Symbol     string  `json:"symbol"`
+	IndexPrice float64 `json:"index_price"`
+	IndexTs    int64   `json:"index_ts"`
 }
 
 type pureCoinMarketCap struct {
@@ -52,19 +54,21 @@ type pureCoinMarketCap struct {
 		ErrorCode    int         `json:"error_code"`
 		ErrorMessage interface{} `json:"error_message"`
 	} `json:"status"`
-	Data []struct {
-		ID     int    `json:"id"`
-		Name   string `json:"name"`
-		Symbol string `json:"symbol"`
-		Quote  struct {
-			USD struct {
-				Price            float64 `json:"price"`
-				PercentChange1H  float64 `json:"percent_change_1h"`
-				PercentChange24H float64 `json:"percent_change_24h"`
-				PercentChange7D  float64 `json:"percent_change_7d"`
-			} `json:"USD"`
-		} `json:"quote"`
-	} `json:"data"`
+	Data []CmcData `json:"data"`
+}
+
+type CmcData struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Symbol string `json:"symbol"`
+	Quote  struct {
+		USD struct {
+			Price            float64 `json:"price"`
+			PercentChange1H  float64 `json:"percent_change_1h"`
+			PercentChange24H float64 `json:"percent_change_24h"`
+			PercentChange7D  float64 `json:"percent_change_7d"`
+		} `json:"USD"`
+	} `json:"quote"`
 }
 
 type PricesTrustV2 struct {
@@ -79,14 +83,16 @@ type Assets struct {
 }
 
 type trustV2Response struct {
-	Currency string `json:"currency"`
-	Docs     []struct {
-		Coin  int    `json:"coin"`
-		Type  string `json:"type"`
-		Price struct {
-			Value     float64 `json:"value"`
-			Change24H float64 `json:"change_24h"`
-		} `json:"price"`
-		LastUpdate time.Time `json:"last_update"`
-	} `json:"docs"`
+	Currency string     `json:"currency"`
+	Docs     []trustDoc `json:"docs"`
+}
+
+type trustDoc struct {
+	Coin  int    `json:"coin"`
+	Type  string `json:"type"`
+	Price struct {
+		Value     float64 `json:"value"`
+		Change24H float64 `json:"change_24h"`
+	} `json:"price"`
+	LastUpdate time.Time `json:"last_update"`
 }

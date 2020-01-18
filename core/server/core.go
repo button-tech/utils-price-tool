@@ -19,22 +19,22 @@ type Core struct {
 	G   *routing.RouteGroup
 	Gv2 *routing.RouteGroup
 
-	service *services.GetPrices
-	store   *cache.Cache
+	p     *services.Prices
+	store *cache.Cache
 }
 
-func New(store *cache.Cache, service *services.GetPrices) (c *Core) {
+func New(store *cache.Cache, p *services.Prices) (c *Core) {
 	c = &Core{
-		R:       routing.New(),
-		store:   store,
-		service: service,
+		R:     routing.New(),
+		store: store,
+		p:     p,
 	}
 	c.R.Use(cors)
 	c.initBaseRoute()
 	c.fs()
 
-	v1.API(c.G, &v1.Provider{Store: c.store, GetPrices: c.service})
-	v2.API(c.Gv2, &v2.Provider{Store: c.store, GetPrices: c.service})
+	v1.API(c.G, &v1.Provider{Store: c.store, Prices: c.p})
+	v2.API(c.Gv2, &v2.Provider{Store: c.store, Prices: c.p})
 	return
 }
 

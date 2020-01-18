@@ -15,14 +15,14 @@ import (
 
 func main() {
 	store := cache.NewCache()
-	getPrices := services.New(store)
-	go tasks.FetchGroup(getPrices)
+	prices := services.New(store)
+	go tasks.FetchGroup(prices)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)
 	}
 
-	c := core.New(store, getPrices)
+	c := core.New(store, prices)
 	signalEx := make(chan os.Signal, 1)
 	defer close(signalEx)
 
