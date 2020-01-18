@@ -158,19 +158,19 @@ func (p *Prices) CreateCMCRequestData() []TokensWithCurrency {
 
 // Get top List of crypto-currencies from coin-market
 func (p *Prices) GetTopList(c map[string]string) error {
+	var topList pureCoinMarketCap
+
 	res, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
 		return errors.Wrap(err, "getTopList")
 	}
 
-	var topList pureCoinMarketCap
+	if res.Response().StatusCode != 200 {
+		return errors.Wrap(errors.New("error"), "getTopList")
+	}
 
 	if err = res.ToJSON(&topList); err != nil {
 		return errors.Wrap(err, "getTopList")
-	}
-
-	if res.Response().StatusCode != 200 {
-		return errors.Wrap(errors.New("error"), "getTopList")
 	}
 
 	if topList.Status.ErrorCode != 0 {
@@ -219,13 +219,10 @@ func floatValid(s float64) bool {
 }
 
 func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
+	cmc := coinMarketCap{}
+
 	res, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
-		return errors.Wrap(err, "PricesCMC")
-	}
-
-	gotPrices := coinMarketCap{}
-	if err = res.ToJSON(&gotPrices); err != nil {
 		return errors.Wrap(err, "PricesCMC")
 	}
 
@@ -233,18 +230,23 @@ func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
 		return errors.Wrap(errors.New("error"), "PricesCMC")
 	}
 
-	for _, v := range gotPrices.Docs {
+	if err = res.ToJSON(&cmc); err != nil {
+		return errors.Wrap(err, "PricesCMC")
+	}
+
+	for _, v := range cmc.Docs {
 		details := cache.Details{}
 		details.Price = v.Price
 		details.ChangePCT24Hour = v.PercentChange24H
 
-		k := cache.GenKey("cmc", gotPrices.Currency, v.Contract)
+		k := cache.GenKey("cmc", cmc.Currency, v.Contract)
 		p.store.Set(k, details)
 	}
 	return nil
 }
 
 func (p *Prices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
+	cmc := coinMarketCap{}
 	res, err := req.Post(trustWalletURL, req.BodyJSON(token))
 	if err != nil {
 		return "", errors.Wrap(err, "PricesCMC")
@@ -254,12 +256,11 @@ func (p *Prices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
 		return "", errors.Wrap(errors.New("error"), "PricesCMC")
 	}
 
-	gotPrices := coinMarketCap{}
-	if err = res.ToJSON(&gotPrices); err != nil {
+	if err = res.ToJSON(&cmc); err != nil {
 		return "", errors.Wrap(err, "PricesCMC")
 	}
 
-	doc := gotPrices.Docs[0]
+	doc := cmc.Docs[0]
 
 	return doc.Price, nil
 }
@@ -282,8 +283,8 @@ func CreateCRCRequestData() []string {
 
 func (p *Prices) SetPricesCRC() {
 	var fsyms string
-	for k := range p.List {
-		fsyms += k + ","
+	for value := range p.List {
+		fsyms += value + ","
 	}
 
 	sortedCurrencies := CreateCRCRequestData()
@@ -392,6 +393,8 @@ func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
 }
 
 func (p *Prices) PricesHUOBI() error {
+	var huobi huobiResponse
+
 	res, err := req.Get(urlHuobi)
 	if err != nil {
 		return errors.Wrap(err, "huobi")
@@ -401,13 +404,11 @@ func (p *Prices) PricesHUOBI() error {
 		return errors.Wrap(errors.New("error"), "huobi")
 	}
 
-	var h huobi
-
-	if err := res.ToJSON(&h); err != nil {
+	if err := res.ToJSON(&huobi); err != nil {
 		return errors.Wrap(err, "toJSON huobi")
 	}
 
-	huobiMapping(&h, p.List, p.store)
+	huobiMapping(&huobi, p.List, p.store)
 
 	return nil
 }
@@ -472,7 +473,7 @@ func pureCMCMapping(pure pureCoinMarketCap, store *cache.Cache) {
 	wg.Wait()
 }
 
-func huobiMapping(h *huobi, list map[string]string, store *cache.Cache) {
+func huobiMapping(h *huobiResponse, list map[string]string, store *cache.Cache) {
 	var wg sync.WaitGroup
 	wg.Add(len(h.Data))
 	for _, v := range h.Data {

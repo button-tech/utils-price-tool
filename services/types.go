@@ -37,7 +37,7 @@ type cryptoCompare struct {
 	ChangePCTHour   float64 `json:"CHANGEPCTHOUR"`
 }
 
-type huobi struct {
+type huobiResponse struct {
 	Status string      `json:"status"`
 	Data   []huobiData `json:"data"`
 	Ts     int64       `json:"ts"`
