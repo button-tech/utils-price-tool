@@ -18,7 +18,8 @@ type PricesV1 []handle.Response
 // Error while processing request
 //
 // swagger:parameters PricesV1
-type inputSlips struct {
-	// in: body
-	Body handle.Data
-}
+
+//type inputSlips struct {
+//	// in: body
+//	Body handle.Data
+//}

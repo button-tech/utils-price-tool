@@ -49,7 +49,7 @@ func makeHexString(s string) (string, error) {
 	// Start from 1, because 1st item is 8. It should be skipped
 	for i := 1; i < len(splitter); i++ {
 		if splitter[i] != "0" {
-			ss = append(splitter[i:])
+			ss = splitter[i:]
 			break
 		}
 	}

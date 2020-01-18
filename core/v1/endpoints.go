@@ -8,9 +8,8 @@ import (
 )
 
 type Provider struct {
-	Store             *cache.Cache
-	GetPrices         *services.GetPrices
-	privateCurrencies map[string][]string
+	Store     *cache.Cache
+	GetPrices *services.GetPrices
 }
 
 type controller struct {

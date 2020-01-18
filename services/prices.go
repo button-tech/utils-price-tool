@@ -29,7 +29,6 @@ var (
 )
 
 type GetPrices struct {
-	mu           sync.Mutex
 	TrustV2Coins []PricesTrustV2
 	List         map[string]string
 	Tokens       map[string]string
@@ -342,23 +341,19 @@ func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]
 }
 
 func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
-	done := false
-	for !done {
-		select {
-		case m, ok := <-c:
-			if !ok {
-				done = true
-				break
-			}
-			for k, v := range m {
-				for _, i := range v {
-					details := cache.Details{}
-					details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
-					details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
-					details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
-					k := cache.GenKey("crc", k, i.FromSymbol)
-					store.Set(k, details)
-				}
+	for {
+		m, ok := <-c
+		if !ok {
+			break
+		}
+		for k, v := range m {
+			for _, i := range v {
+				details := cache.Details{}
+				details.Price = strconv.FormatFloat(i.Price, 'f', -1, 64)
+				details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
+				details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
+				k := cache.GenKey("crc", k, i.FromSymbol)
+				store.Set(k, details)
 			}
 		}
 	}

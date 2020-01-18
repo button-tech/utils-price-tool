@@ -75,7 +75,7 @@ type PricesTrustV2 struct {
 type Assets struct {
 	Coin    int    `json:"coin"`
 	Type    string `json:"type"`
-	TokenID string `json:"token_id,-"`
+	TokenID string `json:"token_id"`
 }
 
 type trustV2Response struct {
