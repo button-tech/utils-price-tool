@@ -4,13 +4,13 @@ import (
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"log"
 	"os"
-	"os/signal"
 	"syscall"
 
 	"github.com/button-tech/logger"
 	core "github.com/button-tech/utils-price-tool/core/server"
 	"github.com/button-tech/utils-price-tool/services"
 	"github.com/button-tech/utils-price-tool/tasks"
+	"os/signal"
 )
 
 func main() {
@@ -23,10 +23,10 @@ func main() {
 	}
 
 	c := core.New(store, prices)
-	signalEx := make(chan os.Signal, 1)
-	defer close(signalEx)
+	signalforExit := make(chan os.Signal, 1)
+	defer close(signalforExit)
 
-	signal.Notify(signalEx,
+	signal.Notify(signalforExit,
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
@@ -43,7 +43,7 @@ func main() {
 		}
 	}()
 
-	stop := <-signalEx
+	stop := <-signalforExit
 	logger.Info("Received", stop)
 	logger.Info("Waiting for all jobs to stop")
 }

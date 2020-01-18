@@ -32,8 +32,7 @@ type Prices struct {
 	TrustV2Coins []PricesTrustV2
 	List         map[string]string
 	Tokens       map[string]string
-
-	store *cache.Cache
+	store        *cache.Cache
 }
 
 var PureCMCCoins = map[string]int{
@@ -159,14 +158,19 @@ func (p *Prices) CreateCMCRequestData() []TokensWithCurrency {
 
 // Get top List of crypto-currencies from coin-market
 func (p *Prices) GetTopList(c map[string]string) error {
-	rq, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
+	res, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
 	if err != nil {
 		return errors.Wrap(err, "getTopList")
 	}
 
 	var topList pureCoinMarketCap
-	if err = rq.ToJSON(&topList); err != nil {
+
+	if err = res.ToJSON(&topList); err != nil {
 		return errors.Wrap(err, "getTopList")
+	}
+
+	if res.Response().StatusCode != 200 {
+		return errors.Wrap(errors.New("error"), "getTopList")
 	}
 
 	if topList.Status.ErrorCode != 0 {
@@ -184,12 +188,15 @@ func (p *Prices) GetTopList(c map[string]string) error {
 				item.Quote.USD.PercentChange24H,
 				item.Quote.USD.PercentChange7D,
 			)
-			k := cache.GenKey("coinMarketCap", "usd", item.Symbol)
-			p.store.Set(k, pricesData)
+
+			p.store.Set(cache.GenKey("coinMarketCap", "usd", item.Symbol), pricesData)
 		}
 	}
+
 	pureCMCMapping(topList, p.store)
+
 	p.List = topListMap
+
 	return nil
 }
 
@@ -212,14 +219,18 @@ func floatValid(s float64) bool {
 }
 
 func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
-	rq, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
+	res, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
 		return errors.Wrap(err, "PricesCMC")
 	}
 
 	gotPrices := coinMarketCap{}
-	if err = rq.ToJSON(&gotPrices); err != nil {
+	if err = res.ToJSON(&gotPrices); err != nil {
 		return errors.Wrap(err, "PricesCMC")
+	}
+
+	if res.Response().StatusCode != 200 {
+		return errors.Wrap(errors.New("error"), "PricesCMC")
 	}
 
 	for _, v := range gotPrices.Docs {
@@ -274,7 +285,9 @@ func (p *Prices) SetPricesCRC() {
 	for k := range p.List {
 		fsyms += k + ","
 	}
+
 	sortedCurrencies := CreateCRCRequestData()
+
 	c := make(chan map[string][]cryptoCompare, len(sortedCurrencies))
 
 	var wg sync.WaitGroup
@@ -283,6 +296,7 @@ func (p *Prices) SetPricesCRC() {
 		go p.crcPricesRequest(tsyms, fsyms, c, &wg)
 	}
 	wg.Wait()
+
 	close(c)
 
 	fiatMapping(c, p.store)
@@ -334,11 +348,11 @@ func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) 
 
 func (p *Prices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	res, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
 	})
-
 	if err != nil {
 		logger.Error("crcPricesRequest", err)
 		return

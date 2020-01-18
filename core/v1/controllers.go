@@ -118,8 +118,7 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 		//	bip := currDetail[0]
 		name := currDetail[1]
 
-		k := cache.GenKey("coinMarketCap", "usd", symbol)
-		d, ok := c.store.Get(k)
+		d, ok := c.store.Get(cache.GenKey("coinMarketCap", "usd", symbol))
 		if ok {
 			priceInfo, err := coinMarketPricesInfo(d.Price, d.ChangePCT24Hour, d.ChangePCT7Day)
 			if err != nil {

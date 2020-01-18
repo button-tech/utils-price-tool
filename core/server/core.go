@@ -14,11 +14,10 @@ import (
 )
 
 type Core struct {
-	S   *fasthttp.Server
-	R   *routing.Router
-	G   *routing.RouteGroup
-	Gv2 *routing.RouteGroup
-
+	S     *fasthttp.Server
+	R     *routing.Router
+	G     *routing.RouteGroup
+	Gv2   *routing.RouteGroup
 	p     *services.Prices
 	store *cache.Cache
 }
