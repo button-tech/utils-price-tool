@@ -59,11 +59,11 @@ func cmcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
 	for _, t := range tokens {
 		tokensWG.Add(1)
 		go func(token services.TokensWithCurrency, tWG *sync.WaitGroup) {
+			defer tWG.Done()
 			if err := service.GetPricesCMC(token); err != nil {
 				logger.Error("cmcWorker", err)
 				return
 			}
-			defer tWG.Done()
 		}(t, &tokensWG)
 	}
 	tokensWG.Wait()
