@@ -319,6 +319,7 @@ func formatCryptoCompare(c *cryptoCompare, from string) {
 }
 
 func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
+	defer wg.Done()
 	rq, err := req.Get(urlCRC, req.Param{
 		"fsyms": fsyms,
 		"tsyms": tsyms,
@@ -337,7 +338,6 @@ func (s *GetPrices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]
 	}
 
 	c <- m
-	defer wg.Done()
 }
 
 func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {

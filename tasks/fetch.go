@@ -52,8 +52,8 @@ func workers() []worker {
 }
 
 func cmcWorker(wg *sync.WaitGroup, service *services.GetPrices) {
-	tokens := service.CreateCMCRequestData()
 	defer wg.Done()
+	tokens := service.CreateCMCRequestData()
 
 	var tokensWG sync.WaitGroup
 	for _, t := range tokens {
@@ -83,16 +83,16 @@ func huobiWorker(wg *sync.WaitGroup, service *services.GetPrices) {
 }
 
 func trustV2Worker(wg *sync.WaitGroup, service *services.GetPrices) {
-	var inWG sync.WaitGroup
 	defer wg.Done()
+	var inWG sync.WaitGroup
 	for _, v := range service.TrustV2Coins {
 		inWG.Add(1)
 		go func(inWg *sync.WaitGroup, price services.PricesTrustV2) {
+			defer inWG.Done()
 			if err := service.GetPricesTrustV2(price); err != nil {
 				logger.Error("trustV2Worker", err)
 				return
 			}
-			defer inWG.Done()
 		}(&inWG, v)
 	}
 	inWG.Wait()
