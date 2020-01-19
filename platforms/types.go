@@ -1,4 +1,4 @@
-package services
+package platforms
 
 import (
 	"time"

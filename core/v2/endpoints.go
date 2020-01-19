@@ -3,18 +3,18 @@ package v2
 import (
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/services"
-	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/button-tech/utils-price-tool/platforms"
+	"github.com/qiangxue/fasthttp-routing"
 )
 
 type Provider struct {
 	Store  *cache.Cache
-	Prices *services.Prices
+	Prices *platforms.Prices
 }
 
 type controller struct {
 	store   *cache.Cache
-	service *services.Prices
+	service *platforms.Prices
 }
 
 func API(g *routing.RouteGroup, p *Provider) {

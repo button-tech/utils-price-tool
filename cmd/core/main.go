@@ -8,15 +8,17 @@ import (
 
 	"github.com/button-tech/logger"
 	core "github.com/button-tech/utils-price-tool/core/server"
-	"github.com/button-tech/utils-price-tool/services"
-	"github.com/button-tech/utils-price-tool/tasks"
+	"github.com/button-tech/utils-price-tool/platforms"
+	"github.com/button-tech/utils-price-tool/services/update"
 	"os/signal"
 )
 
 func main() {
 	store := cache.NewCache()
-	prices := services.New(store)
-	go tasks.FetchGroup(prices)
+
+	prices := platforms.NewPrices(store)
+
+	go update.Start(prices)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)

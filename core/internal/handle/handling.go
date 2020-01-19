@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/platforms"
 	"github.com/pkg/errors"
 )
 
@@ -43,7 +43,7 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, store *cache.Cache, s *services.Prices) ([]Response, error) {
+func Reply(u *UniqueData, v string, store *cache.Cache, s *platforms.Prices) ([]Response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
@@ -67,12 +67,12 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, store *cache.Cache, s *services.Prices) ([]Response, error) {
+func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response, error) {
 	result := make([]Response, 0, len(u.Currencies))
 
 	var wg sync.WaitGroup
 	for c := range u.Currencies {
-		tokens := services.TokensWithCurrency{Currency: c}
+		tokens := platforms.TokensWithCurrency{Currency: c}
 		var price Response
 		for t := range u.Tokens {
 			k := cache.GenKey(u.API, c, t)
@@ -85,7 +85,7 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.Prices) ([]Response,
 				price.Rates = append(price.Rates, contract)
 			} else {
 				if s != nil && u.API == "cmc" {
-					tokens.Tokens = append(tokens.Tokens, services.Token{Contract: t})
+					tokens.Tokens = append(tokens.Tokens, platforms.Token{Contract: t})
 				}
 			}
 		}
@@ -132,7 +132,7 @@ func mapping(u *UniqueData, store *cache.Cache, s *services.Prices) ([]Response,
 	return result, nil
 }
 
-func SingleERC20Course(fiat, token string, s *services.Prices) (string, error) {
+func SingleERC20Course(fiat, token string, s *platforms.Prices) (string, error) {
 	price, err := s.GetTokenPriceCMC(makeSingleToken(fiat, token))
 	if err != nil {
 		return "", err
@@ -140,11 +140,11 @@ func SingleERC20Course(fiat, token string, s *services.Prices) (string, error) {
 	return price, nil
 }
 
-func makeSingleToken(fiat, crypto string) services.TokensWithCurrency {
-	token := make([]services.Token, 0, 1)
-	token = append(token, services.Token{Contract: crypto})
+func makeSingleToken(fiat, crypto string) platforms.TokensWithCurrency {
+	token := make([]platforms.Token, 0, 1)
+	token = append(token, platforms.Token{Contract: crypto})
 
-	return services.TokensWithCurrency{
+	return platforms.TokensWithCurrency{
 		Currency: fiat,
 		Tokens:   token,
 	}

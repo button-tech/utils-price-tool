@@ -6,7 +6,7 @@ import (
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/platforms"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -82,11 +82,11 @@ func supportInfo() []handle.APIs {
 	apis = append(apis, handle.APIs{
 		Name:             "ntrust",
 		SupportedChanges: supportedNewTrust,
-		SupportedFiats:   services.TrustV2Coins,
+		SupportedFiats:   platforms.TrustV2Coins,
 	}, handle.APIs{
 		Name:             "pcmc",
 		SupportedChanges: supportedPureCMC,
-		SupportedFiats:   services.PureCMCCoins,
+		SupportedFiats:   platforms.PureCMCCoins,
 	})
 	return apis
 }

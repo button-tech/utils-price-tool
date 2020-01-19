@@ -3,17 +3,17 @@ package v1
 import (
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/services"
+	"github.com/button-tech/utils-price-tool/platforms"
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
 type Provider struct {
 	Store  *cache.Cache
-	Prices *services.Prices
+	Prices *platforms.Prices
 }
 
 type controller struct {
-	prices            *services.Prices
+	prices            *platforms.Prices
 	store             *cache.Cache
 	privateCurrencies map[string][]string
 }
