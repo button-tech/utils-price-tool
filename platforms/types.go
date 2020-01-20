@@ -17,7 +17,7 @@ type Token struct {
 	Contract string `json:"contract"`
 }
 
-type coinMarketCap struct {
+type CoinMarketCap struct {
 	Status   bool         `json:"status"`
 	Docs     []docsPrices `json:"docs"`
 	Currency string       `json:"currency"`

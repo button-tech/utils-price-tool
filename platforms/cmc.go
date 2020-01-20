@@ -6,11 +6,10 @@ import (
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
 	"os"
-	"strconv"
 	"sync"
 )
 
-var trustWalletURL = os.Getenv("TRUST_URL")
+var TrustWalletURL = os.Getenv("TRUST_URL")
 
 func CmcUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 	defer wg.Done()
@@ -31,9 +30,9 @@ func CmcUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 }
 
 func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
-	cmc := coinMarketCap{}
+	var cmc CoinMarketCap
 
-	res, err := req.Post(trustWalletURL, req.BodyJSON(tokens))
+	res, err := req.Post(TrustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
 		return errors.Wrap(err, "PricesCMC")
 	}
@@ -55,48 +54,6 @@ func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
 		p.store.Set(k, details)
 	}
 	return nil
-}
-
-func (_ *Prices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
-	cmc := coinMarketCap{}
-	res, err := req.Post(trustWalletURL, req.BodyJSON(token))
-	if err != nil {
-		return "", errors.Wrap(err, "PricesCMC")
-	}
-
-	if res.Response().StatusCode != 200 {
-		return "", errors.Wrap(errors.New("error"), "PricesCMC")
-	}
-
-	if err = res.ToJSON(&cmc); err != nil {
-		return "", errors.Wrap(err, "PricesCMC")
-	}
-
-	doc := cmc.Docs[0]
-
-	return doc.Price, nil
-}
-
-func cmcMapping(pure pureCoinMarketCap, store *cache.Cache) {
-	var wg sync.WaitGroup
-	wg.Add(len(pure.Data))
-	for _, v := range pure.Data {
-		go func(v CmcData, wg *sync.WaitGroup) {
-			defer wg.Done()
-			if coinID, ok := TrustV2Coins[v.Symbol]; ok {
-				pricesData := detailsConversion(
-					v.Quote.USD.Price,
-					v.Quote.USD.PercentChange1H,
-					v.Quote.USD.PercentChange24H,
-					v.Quote.USD.PercentChange7D,
-				)
-				convCoinID := strconv.Itoa(coinID)
-				kt := cache.GenKey("pcmc", "usd", convCoinID)
-				store.Set(kt, pricesData)
-			}
-		}(v, &wg)
-	}
-	wg.Wait()
 }
 
 func (p *Prices) CreateCMCRequestData() []TokensWithCurrency {

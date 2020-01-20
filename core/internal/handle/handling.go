@@ -6,6 +6,7 @@ import (
 
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/platforms"
+	"github.com/imroc/req"
 	"github.com/pkg/errors"
 )
 
@@ -132,22 +133,34 @@ func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response
 	return result, nil
 }
 
-func SingleERC20Course(fiat, token string, s *platforms.Prices) (string, error) {
-	price, err := s.GetTokenPriceCMC(makeSingleToken(fiat, token))
-	if err != nil {
-		return "", err
-	}
-	return price, nil
-}
+func SingleERC20Course(fiat, crypto string, s *platforms.Prices) (string, error) {
 
-func makeSingleToken(fiat, crypto string) platforms.TokensWithCurrency {
+	var cmc platforms.CoinMarketCap
+
 	token := make([]platforms.Token, 0, 1)
 	token = append(token, platforms.Token{Contract: crypto})
 
-	return platforms.TokensWithCurrency{
+	singleToken := platforms.TokensWithCurrency{
 		Currency: fiat,
 		Tokens:   token,
 	}
+
+	res, err := req.Post(platforms.TrustWalletURL, req.BodyJSON(singleToken))
+	if err != nil {
+		return "", errors.Wrap(err, "PricesCMC")
+	}
+
+	if res.Response().StatusCode != 200 {
+		return "", errors.Wrap(errors.New("error"), "PricesCMC")
+	}
+
+	if err = res.ToJSON(&cmc); err != nil {
+		return "", errors.Wrap(err, "PricesCMC")
+	}
+
+	doc := cmc.Docs[0]
+
+	return doc.Price, nil
 }
 
 func changesControl(m map[string]string, d *cache.Details, c string) (err error) {

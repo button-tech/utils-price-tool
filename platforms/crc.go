@@ -25,7 +25,7 @@ func (p *Prices) setPricesCRC() {
 		fsyms += value + ","
 	}
 
-	sortedCurrencies := CreateCRCRequestData()
+	sortedCurrencies := createCRCRequestData()
 
 	c := make(chan map[string][]cryptoCompare, len(sortedCurrencies))
 
@@ -130,7 +130,7 @@ func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
 	}
 }
 
-func CreateCRCRequestData() []string {
+func createCRCRequestData() []string {
 	sortedCurrencies := make([]string, 0, 7)
 	n := 0
 	step := 25

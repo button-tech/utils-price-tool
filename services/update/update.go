@@ -33,7 +33,7 @@ func Start(p *platforms.Prices) {
 	t := time.NewTicker(time.Minute * 7)
 	for ; true; <-t.C {
 		start := time.Now()
-		if err := p.GetTopList(converted); err != nil {
+		if err := p.SetCmcTopList(converted); err != nil {
 			logger.Error("GetTopList", err)
 			continue
 		}

@@ -29,6 +29,8 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 }
 
 func (p *Prices) pricesTrust(prices PricesTrustV2) error {
+	var wg sync.WaitGroup
+
 	res, err := req.Post(trustWalletV2URL, req.BodyJSON(&prices))
 
 	if err != nil {
@@ -45,24 +47,19 @@ func (p *Prices) pricesTrust(prices PricesTrustV2) error {
 		return errors.Wrap(err, "PricesTrustV2toJSON")
 	}
 
-	trustMapping(&trustRes, p.store)
-
-	return nil
-}
-
-func trustMapping(r *trustV2Response, store *cache.Cache) {
-	var wg sync.WaitGroup
-	wg.Add(len(r.Docs))
-	for _, doc := range r.Docs {
+	wg.Add(len(trustRes.Docs))
+	for _, doc := range trustRes.Docs {
 		go func(doc trustDoc, wg *sync.WaitGroup) {
 			defer wg.Done()
 			coin := strconv.Itoa(doc.Coin)
 			sd := detailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
-			k := cache.GenKey("ntrust", r.Currency, coin)
-			store.Set(k, sd)
+			k := cache.GenKey("ntrust", trustRes.Currency, coin)
+			p.store.Set(k, sd)
 		}(doc, &wg)
 	}
 	wg.Wait()
+
+	return nil
 }
 
 func createTrustV2RequestData() []PricesTrustV2 {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
+	"sync"
 )
 
 type Prices struct {
@@ -33,7 +34,7 @@ const (
 const coin = "coin"
 
 // Get top List of crypto-currencies from coin-market
-func (p *Prices) GetTopList(c map[string]string) error {
+func (p *Prices) SetCmcTopList(c map[string]string) error {
 	var topList pureCoinMarketCap
 
 	res, err := req.Get(urlTopList, req.Header{"X-CMC_PRO_API_KEY": topListAPIKey})
@@ -69,7 +70,25 @@ func (p *Prices) GetTopList(c map[string]string) error {
 		}
 	}
 
-	cmcMapping(topList, p.store)
+	var wg sync.WaitGroup
+	wg.Add(len(topList.Data))
+	for _, v := range topList.Data {
+		go func(v CmcData, wg *sync.WaitGroup) {
+			defer wg.Done()
+			if coinID, ok := TrustV2Coins[v.Symbol]; ok {
+				pricesData := detailsConversion(
+					v.Quote.USD.Price,
+					v.Quote.USD.PercentChange1H,
+					v.Quote.USD.PercentChange24H,
+					v.Quote.USD.PercentChange7D,
+				)
+				convCoinID := strconv.Itoa(coinID)
+				kt := cache.GenKey("pcmc", "usd", convCoinID)
+				p.store.Set(kt, pricesData)
+			}
+		}(v, &wg)
+	}
+	wg.Wait()
 
 	p.List = topListMap
 

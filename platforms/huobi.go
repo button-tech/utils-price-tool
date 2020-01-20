@@ -20,7 +20,10 @@ func HuobiUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 }
 
 func (p *Prices) pricesHuobi() error {
-	var huobi huobiResponse
+	var (
+		huobi huobiResponse
+		wg    sync.WaitGroup
+	)
 
 	res, err := req.Get(urlHuobi)
 	if err != nil {
@@ -35,24 +38,19 @@ func (p *Prices) pricesHuobi() error {
 		return errors.Wrap(err, "toJSON huobi")
 	}
 
-	huobiMapping(&huobi, p.List, p.store)
-
-	return nil
-}
-
-func huobiMapping(h *huobiResponse, list map[string]string, store *cache.Cache) {
-	var wg sync.WaitGroup
-	wg.Add(len(h.Data))
-	for _, v := range h.Data {
+	wg.Add(len(huobi.Data))
+	for _, v := range huobi.Data {
 		go func(v huobiData, wg *sync.WaitGroup) {
-			if val, ok := list[v.Symbol]; ok {
+			if val, ok := p.List[v.Symbol]; ok {
 				defer wg.Done()
 				var details cache.Details
 				details.Price = strconv.FormatFloat(v.IndexPrice, 'f', -1, 64)
 				k := cache.GenKey("huobi", "usd", val)
-				store.Set(k, details)
+				p.store.Set(k, details)
 			}
 		}(v, &wg)
 	}
 	wg.Wait()
+
+	return nil
 }
