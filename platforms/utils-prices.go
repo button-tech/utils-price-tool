@@ -32,7 +32,6 @@ const (
 
 const coin = "coin"
 
-
 // Get top List of crypto-currencies from coin-market
 func (p *Prices) GetTopList(c map[string]string) error {
 	var topList pureCoinMarketCap
@@ -94,7 +93,6 @@ func detailsConversion(price, hour, hour24, sevenDay float64) cache.Details {
 func floatValid(s float64) bool {
 	return s != 0
 }
-
 
 var PureCMCCoins = map[string]int{
 	"AE":    457,
@@ -172,7 +170,6 @@ var TrustV2Coins = map[string]int{
 	"NANO":  165,
 	"DGB":   20,
 }
-
 
 var currencies = []string{
 	"AED",

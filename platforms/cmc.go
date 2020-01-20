@@ -12,7 +12,7 @@ import (
 
 var trustWalletURL = os.Getenv("TRUST_URL")
 
-func CmcUpdteWorker(wg *sync.WaitGroup, p *Prices) {
+func CmcUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 	defer wg.Done()
 	tokens := p.CreateCMCRequestData()
 
@@ -57,7 +57,7 @@ func (p *Prices) SetPricesCMC(tokens TokensWithCurrency) error {
 	return nil
 }
 
-func (p *Prices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
+func (_ *Prices) GetTokenPriceCMC(token TokensWithCurrency) (string, error) {
 	cmc := coinMarketCap{}
 	res, err := req.Post(trustWalletURL, req.BodyJSON(token))
 	if err != nil {

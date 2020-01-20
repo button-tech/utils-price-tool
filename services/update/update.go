@@ -14,7 +14,7 @@ type updateWorker func(wg *sync.WaitGroup, prices *platforms.Prices)
 
 func getUpdateWorkers() []updateWorker {
 	return []updateWorker{
-		platforms.CmcUpdteWorker,
+		platforms.CmcUpdateWorker,
 		platforms.HuobiUpdateWorker,
 		platforms.TrustUpdateWorker,
 		platforms.CrcUpdateWorker,

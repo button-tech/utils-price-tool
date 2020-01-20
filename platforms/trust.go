@@ -5,9 +5,9 @@ import (
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
+	"os"
 	"strconv"
 	"sync"
-	"os"
 )
 
 var trustWalletV2URL = os.Getenv("TRUST_URL_V2")
@@ -29,8 +29,7 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 }
 
 func (p *Prices) pricesTrust(prices PricesTrustV2) error {
-	rq := req.New()
-	res, err := rq.Post(trustWalletV2URL, req.BodyJSON(&prices))
+	res, err := req.Post(trustWalletV2URL, req.BodyJSON(&prices))
 
 	if err != nil {
 		return errors.Wrap(err, "PricesTrustV2")
