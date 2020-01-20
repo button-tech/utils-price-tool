@@ -19,10 +19,10 @@ const urlCRC = "https://min-api.cryptocompare.com/data/pricemultifull"
 
 func CrcUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	defer wg.Done()
-	setPricesCRC(p)
+	SetPricesCRC(p)
 }
 
-func setPricesCRC(p *prices.PricesData) {
+func SetPricesCRC(p *prices.PricesData) {
 	var fsyms string
 	for value := range p.List {
 		fsyms += value + ","

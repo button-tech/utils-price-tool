@@ -21,7 +21,7 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 		inWG.Add(1)
 		go func(inWg *sync.WaitGroup, price types.PricesTrustV2) {
 			defer inWG.Done()
-			if err := pricesTrust(price, p); err != nil {
+			if err := SetPricesTrust(price, p); err != nil {
 				logger.Error("trustV2Worker", err)
 				return
 			}
@@ -30,7 +30,7 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	inWG.Wait()
 }
 
-func pricesTrust(prices types.PricesTrustV2, p *prices.PricesData) error {
+func SetPricesTrust(prices types.PricesTrustV2, p *prices.PricesData) error {
 	var wg sync.WaitGroup
 
 	res, err := req.Post(trustWalletV2URL, req.BodyJSON(&prices))

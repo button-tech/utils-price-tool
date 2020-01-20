@@ -15,13 +15,13 @@ const urlHuobi = "https://api.hbdm.com/api/v1/contract_index"
 
 func HuobiUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	defer wg.Done()
-	if err := pricesHuobi(p); err != nil {
+	if err := SetPricesHuobi(p); err != nil {
 		logger.Error("huobiWorker", err)
 		return
 	}
 }
 
-func pricesHuobi(p *prices.PricesData) error {
+func SetPricesHuobi(p *prices.PricesData) error {
 	var (
 		huobi types.HuobiResponse
 		wg    sync.WaitGroup
