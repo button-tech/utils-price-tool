@@ -3,7 +3,10 @@ package platforms
 import (
 	"encoding/json"
 	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/core/currencies"
+	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
+	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
 	"github.com/valyala/fastjson"
@@ -14,12 +17,12 @@ import (
 
 const urlCRC = "https://min-api.cryptocompare.com/data/pricemultifull"
 
-func CrcUpdateWorker(wg *sync.WaitGroup, p *Prices) {
+func CrcUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	defer wg.Done()
-	p.setPricesCRC()
+	setPricesCRC(p)
 }
 
-func (p *Prices) setPricesCRC() {
+func setPricesCRC(p *prices.PricesData) {
 	var fsyms string
 	for value := range p.List {
 		fsyms += value + ","
@@ -27,21 +30,21 @@ func (p *Prices) setPricesCRC() {
 
 	sortedCurrencies := createCRCRequestData()
 
-	c := make(chan map[string][]cryptoCompare, len(sortedCurrencies))
+	c := make(chan map[string][]types.CryptoCompare, len(sortedCurrencies))
 
 	var wg sync.WaitGroup
 	wg.Add(len(sortedCurrencies))
 	for _, tsyms := range sortedCurrencies {
-		go p.crcPricesRequest(tsyms, fsyms, c, &wg)
+		go crcPricesRequest(tsyms, fsyms, c, &wg, p)
 	}
 	wg.Wait()
 
 	close(c)
 
-	fiatMapping(c, p.store)
+	fiatMapping(c, p.Store)
 }
 
-func (p *Prices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cryptoCompare, wg *sync.WaitGroup) {
+func crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]types.CryptoCompare, wg *sync.WaitGroup, p *prices.PricesData) {
 	defer wg.Done()
 
 	res, err := req.Get(urlCRC, req.Param{
@@ -58,7 +61,7 @@ func (p *Prices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cry
 		return
 	}
 
-	result, err := p.crcFastJson(res.Bytes())
+	result, err := crcFastJson(res.Bytes(), p)
 	if err != nil {
 		logger.Error("crcPricesRequest", err)
 		return
@@ -67,7 +70,7 @@ func (p *Prices) crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]cry
 	c <- result
 }
 
-func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) {
+func crcFastJson(byteRq []byte, p *prices.PricesData) (map[string][]types.CryptoCompare, error) {
 	var parser fastjson.Parser
 
 	parsed, err := parser.ParseBytes(byteRq)
@@ -75,7 +78,7 @@ func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) 
 		return nil, errors.Wrap(err, "crcFastJson")
 	}
 
-	cryptoCompareDict := make(map[string][]cryptoCompare)
+	cryptoCompareDict := make(map[string][]types.CryptoCompare)
 
 	rawObject := parsed.GetObject("RAW")
 
@@ -85,7 +88,7 @@ func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) 
 
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
 
-				var c cryptoCompare
+				var c types.CryptoCompare
 
 				if err := json.Unmarshal([]byte(value.String()), &c); err != nil {
 					logger.Error("o.Visit", err)
@@ -94,7 +97,7 @@ func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) 
 
 				result, ok := cryptoCompareDict[c.ToSymbol]
 				if !ok {
-					cryptoCompareDict[c.ToSymbol] = make([]cryptoCompare, 0)
+					cryptoCompareDict[c.ToSymbol] = make([]types.CryptoCompare, 0)
 				}
 
 				result = append(result, c)
@@ -111,7 +114,7 @@ func (p *Prices) crcFastJson(byteRq []byte) (map[string][]cryptoCompare, error) 
 	return cryptoCompareDict, nil
 }
 
-func fiatMapping(c chan map[string][]cryptoCompare, store *cache.Cache) {
+func fiatMapping(c chan map[string][]types.CryptoCompare, store *cache.Cache) {
 	for {
 		m, ok := <-c
 		if !ok {
@@ -135,12 +138,12 @@ func createCRCRequestData() []string {
 	n := 0
 	step := 25
 	for i := 0; i < 6; i++ {
-		c := strings.Join(currencies[n:step], ",")
+		c := strings.Join(currencies.SupportedCurrenciesList[n:step], ",")
 		sortedCurrencies = append(sortedCurrencies, c)
 		n += 25
 		step += 25
 	}
-	c := strings.Join(currencies[150:], ",")
+	c := strings.Join(currencies.SupportedCurrenciesList[150:], ",")
 	sortedCurrencies = append(sortedCurrencies, c)
 
 	return sortedCurrencies

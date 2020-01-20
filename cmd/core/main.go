@@ -7,8 +7,8 @@ import (
 	"syscall"
 
 	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/core/prices"
 	core "github.com/button-tech/utils-price-tool/core/server"
-	"github.com/button-tech/utils-price-tool/platforms"
 	"github.com/button-tech/utils-price-tool/services/update"
 	"os/signal"
 )
@@ -16,15 +16,15 @@ import (
 func main() {
 	store := cache.NewCache()
 
-	prices := platforms.NewPrices(store)
+	p := prices.New(store)
 
-	go update.Start(prices)
+	go update.Start(p)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)
 	}
 
-	c := core.New(store, prices)
+	c := core.New(store, p)
 	signalforExit := make(chan os.Signal, 1)
 	defer close(signalforExit)
 

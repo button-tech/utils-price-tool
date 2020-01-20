@@ -1,8 +1,6 @@
-package platforms
+package types
 
-import (
-	"time"
-)
+import "time"
 
 type RequestCoinMarketCap struct {
 	Tokens []TokensWithCurrency
@@ -29,7 +27,7 @@ type docsPrices struct {
 	PercentChange24H string `json:"percent_change_24h"`
 }
 
-type cryptoCompare struct {
+type CryptoCompare struct {
 	ToSymbol        string  `json:"TOSYMBOL"`
 	FromSymbol      string  `json:"FROMSYMBOL"`
 	Price           float64 `json:"PRICE"`
@@ -37,19 +35,19 @@ type cryptoCompare struct {
 	ChangePCTHour   float64 `json:"CHANGEPCTHOUR"`
 }
 
-type huobiResponse struct {
+type HuobiResponse struct {
 	Status string      `json:"status"`
-	Data   []huobiData `json:"data"`
+	Data   []HuobiData `json:"data"`
 	Ts     int64       `json:"ts"`
 }
 
-type huobiData struct {
+type HuobiData struct {
 	Symbol     string  `json:"symbol"`
 	IndexPrice float64 `json:"index_price"`
 	IndexTs    int64   `json:"index_ts"`
 }
 
-type pureCoinMarketCap struct {
+type PureCoinMarketCap struct {
 	Status struct {
 		ErrorCode    int         `json:"error_code"`
 		ErrorMessage interface{} `json:"error_message"`
@@ -82,12 +80,12 @@ type Assets struct {
 	TokenID string `json:"token_id"`
 }
 
-type trustV2Response struct {
+type TrustV2Response struct {
 	Currency string     `json:"currency"`
-	Docs     []trustDoc `json:"docs"`
+	Docs     []TrustDoc `json:"docs"`
 }
 
-type trustDoc struct {
+type TrustDoc struct {
 	Coin  int    `json:"coin"`
 	Type  string `json:"type"`
 	Price struct {

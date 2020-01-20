@@ -4,8 +4,10 @@ import (
 	"log"
 	"sync"
 
+	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/platforms"
+	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
 )
@@ -13,6 +15,31 @@ import (
 type Cache interface {
 	Get(k string, d cache.Details)
 	Set(k string, d cache.Details)
+}
+
+type Data struct {
+	Tokens     []string `json:"tokens"`
+	Currencies []string `json:"currencies"`
+	Change     string   `json:"change"`
+	API        string   `json:"api"`
+}
+
+type UniqueData struct {
+	Tokens     map[string]struct{}
+	Currencies map[string]struct{}
+	Change     string
+	API        string
+}
+
+type Response struct {
+	Currency string              `json:"currency"`
+	Rates    []map[string]string `json:"rates"`
+}
+
+type APIs struct {
+	Name             string         `json:"name"`
+	SupportedChanges []string       `json:"supported_changes"`
+	SupportedFiats   map[string]int `json:"supported_fiats"`
 }
 
 var supportedAPIv1 = map[string]struct{}{
@@ -44,7 +71,7 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, store *cache.Cache, s *platforms.Prices) ([]Response, error) {
+func Reply(u *UniqueData, v string, store *cache.Cache, s *prices.PricesData) ([]Response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
@@ -68,12 +95,12 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response, error) {
+func mapping(u *UniqueData, store *cache.Cache, p *prices.PricesData) ([]Response, error) {
 	result := make([]Response, 0, len(u.Currencies))
 
 	var wg sync.WaitGroup
 	for c := range u.Currencies {
-		tokens := platforms.TokensWithCurrency{Currency: c}
+		tokens := types.TokensWithCurrency{Currency: c}
 		var price Response
 		for t := range u.Tokens {
 			k := cache.GenKey(u.API, c, t)
@@ -85,8 +112,8 @@ func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response
 				}
 				price.Rates = append(price.Rates, contract)
 			} else {
-				if s != nil && u.API == "cmc" {
-					tokens.Tokens = append(tokens.Tokens, platforms.Token{Contract: t})
+				if p != nil && u.API == "cmc" {
+					tokens.Tokens = append(tokens.Tokens, types.Token{Contract: t})
 				}
 			}
 		}
@@ -94,10 +121,10 @@ func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response
 			price.Currency = c
 			result = append(result, price)
 		}
-		if s != nil && len(tokens.Tokens) > 0 {
+		if p != nil && len(tokens.Tokens) > 0 {
 			wg.Add(1)
 			go func(wg *sync.WaitGroup, store *cache.Cache) {
-				if err := s.SetPricesCMC(tokens); err != nil {
+				if err := platforms.SetPricesCMC(tokens, p); err != nil {
 					log.Println(err)
 				}
 				wg.Done()
@@ -105,7 +132,7 @@ func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response
 		}
 	}
 
-	if s == nil || len(result) > 0 {
+	if p == nil || len(result) > 0 {
 		return result, nil
 	}
 	wg.Wait()
@@ -133,14 +160,14 @@ func mapping(u *UniqueData, store *cache.Cache, s *platforms.Prices) ([]Response
 	return result, nil
 }
 
-func SingleERC20Course(fiat, crypto string, s *platforms.Prices) (string, error) {
+func SingleERC20Course(fiat, crypto string, s *prices.PricesData) (string, error) {
 
-	var cmc platforms.CoinMarketCap
+	var cmc types.CoinMarketCap
 
-	token := make([]platforms.Token, 0, 1)
-	token = append(token, platforms.Token{Contract: crypto})
+	token := make([]types.Token, 0, 1)
+	token = append(token, types.Token{Contract: crypto})
 
-	singleToken := platforms.TokensWithCurrency{
+	singleToken := types.TokensWithCurrency{
 		Currency: fiat,
 		Tokens:   token,
 	}

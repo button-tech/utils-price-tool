@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
+	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/core/v1"
 	"github.com/button-tech/utils-price-tool/core/v2"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/platforms"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 	"time"
@@ -18,11 +18,11 @@ type Core struct {
 	R     *routing.Router
 	G     *routing.RouteGroup
 	Gv2   *routing.RouteGroup
-	p     *platforms.Prices
+	p     *prices.PricesData
 	store *cache.Cache
 }
 
-func New(store *cache.Cache, p *platforms.Prices) (c *Core) {
+func New(store *cache.Cache, p *prices.PricesData) (c *Core) {
 	c = &Core{
 		R:     routing.New(),
 		store: store,

@@ -2,7 +2,9 @@ package platforms
 
 import (
 	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
+	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
 	"github.com/pkg/errors"
 	"os"
@@ -12,14 +14,14 @@ import (
 
 var trustWalletV2URL = os.Getenv("TRUST_URL_V2")
 
-func TrustUpdateWorker(wg *sync.WaitGroup, p *Prices) {
+func TrustUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	defer wg.Done()
 	var inWG sync.WaitGroup
 	for _, v := range p.TrustV2Coins {
 		inWG.Add(1)
-		go func(inWg *sync.WaitGroup, price PricesTrustV2) {
+		go func(inWg *sync.WaitGroup, price types.PricesTrustV2) {
 			defer inWG.Done()
-			if err := p.pricesTrust(price); err != nil {
+			if err := pricesTrust(price, p); err != nil {
 				logger.Error("trustV2Worker", err)
 				return
 			}
@@ -28,7 +30,7 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *Prices) {
 	inWG.Wait()
 }
 
-func (p *Prices) pricesTrust(prices PricesTrustV2) error {
+func pricesTrust(prices types.PricesTrustV2, p *prices.PricesData) error {
 	var wg sync.WaitGroup
 
 	res, err := req.Post(trustWalletV2URL, req.BodyJSON(&prices))
@@ -41,7 +43,7 @@ func (p *Prices) pricesTrust(prices PricesTrustV2) error {
 		return errors.Wrap(errors.New("error"), "PricesTrustV2")
 	}
 
-	var trustRes trustV2Response
+	var trustRes types.TrustV2Response
 
 	if err := res.ToJSON(&trustRes); err != nil {
 		return errors.Wrap(err, "PricesTrustV2toJSON")
@@ -49,29 +51,15 @@ func (p *Prices) pricesTrust(prices PricesTrustV2) error {
 
 	wg.Add(len(trustRes.Docs))
 	for _, doc := range trustRes.Docs {
-		go func(doc trustDoc, wg *sync.WaitGroup) {
+		go func(doc types.TrustDoc, wg *sync.WaitGroup) {
 			defer wg.Done()
 			coin := strconv.Itoa(doc.Coin)
-			sd := detailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
+			sd := p.DetailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
 			k := cache.GenKey("ntrust", trustRes.Currency, coin)
-			p.store.Set(k, sd)
+			p.Store.Set(k, sd)
 		}(doc, &wg)
 	}
 	wg.Wait()
 
 	return nil
-}
-
-func createTrustV2RequestData() []PricesTrustV2 {
-	prices := make([]PricesTrustV2, 0, len(currencies))
-	for _, c := range currencies {
-		price := PricesTrustV2{Currency: c}
-		allAssets := make([]Assets, 0, len(TrustV2Coins))
-		for _, v := range TrustV2Coins {
-			allAssets = append(allAssets, Assets{Coin: v, Type: coin})
-		}
-		price.Assets = allAssets
-		prices = append(prices, price)
-	}
-	return prices
 }

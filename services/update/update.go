@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/button-tech/logger"
+	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/slip0044"
 	"github.com/button-tech/utils-price-tool/platforms"
 )
 
-type updateWorker func(wg *sync.WaitGroup, prices *platforms.Prices)
+type updateWorker func(wg *sync.WaitGroup, prices *prices.PricesData)
 
 func getUpdateWorkers() []updateWorker {
 	return []updateWorker{
@@ -21,7 +22,7 @@ func getUpdateWorkers() []updateWorker {
 	}
 }
 
-func Start(p *platforms.Prices) {
+func Start(p *prices.PricesData) {
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
 		logger.Error("AddTrustHexBySlip", err)
@@ -33,7 +34,7 @@ func Start(p *platforms.Prices) {
 	t := time.NewTicker(time.Minute * 7)
 	for ; true; <-t.C {
 		start := time.Now()
-		if err := p.SetCmcTopList(converted); err != nil {
+		if err := p.SetTopList(converted); err != nil {
 			logger.Error("GetTopList", err)
 			continue
 		}

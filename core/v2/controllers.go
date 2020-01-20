@@ -3,11 +3,11 @@ package v2
 import (
 	"encoding/json"
 
+	"github.com/button-tech/utils-price-tool/core/currencies"
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
-	"github.com/button-tech/utils-price-tool/platforms"
-	routing "github.com/qiangxue/fasthttp-routing"
+	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
 
@@ -82,11 +82,11 @@ func supportInfo() []handle.APIs {
 	apis = append(apis, handle.APIs{
 		Name:             "ntrust",
 		SupportedChanges: supportedNewTrust,
-		SupportedFiats:   platforms.TrustV2Coins,
+		SupportedFiats:   currencies.TrustV2Coins,
 	}, handle.APIs{
 		Name:             "pcmc",
 		SupportedChanges: supportedPureCMC,
-		SupportedFiats:   platforms.PureCMCCoins,
+		SupportedFiats:   currencies.PureCMCCoins,
 	})
 	return apis
 }
