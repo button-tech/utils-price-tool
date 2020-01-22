@@ -28,6 +28,8 @@ import (
 	"github.com/pkg/errors"
 	routing "github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
+
+	"github.com/button-tech/utils-price-tool/types"
 )
 
 const (
@@ -83,16 +85,16 @@ func (c *controller) courses(ctx *routing.Context) error {
 			Func:    funcName,
 			Err:     err,
 			Payload: respond.Payload("response", "handle.Reply"),
-		}, map[string]interface{}{"api": supportInfo(), "error": "please, use these API"})
+		}, types.Payload{"api": supportInfo(), "error": "please, use these API"})
 		return nil
 	}
 
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": res})
+	respond.WithJSON(ctx, fasthttp.StatusOK, types.Payload{"data": res})
 	return nil
 }
 
 func (c *controller) info(ctx *routing.Context) error {
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"api": supportInfo()})
+	respond.WithJSON(ctx, fasthttp.StatusOK, types.Payload{"api": supportInfo()})
 	return nil
 }
 
@@ -136,7 +138,7 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 		}
 	}
 
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": currencies})
+	respond.WithJSON(ctx, fasthttp.StatusOK, types.Payload{"data": currencies})
 	return nil
 }
 

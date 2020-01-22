@@ -11,6 +11,8 @@ import (
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 	"time"
+
+	t "github.com/button-tech/utils-price-tool/types"
 )
 
 type Core struct {
@@ -71,7 +73,7 @@ func cors(ctx *routing.Context) error {
 
 		b, err := json.Marshal(err)
 		if err != nil {
-			respond.WithJSON(ctx, fasthttp.StatusInternalServerError, map[string]interface{}{
+			respond.WithJSON(ctx, fasthttp.StatusInternalServerError, t.Payload{
 				"error": err},
 			)
 			logger.Error("cors marshal", err)

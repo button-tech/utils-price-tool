@@ -7,6 +7,7 @@ import (
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
+	t "github.com/button-tech/utils-price-tool/types"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -36,16 +37,16 @@ func (c *controller) courses(ctx *routing.Context) error {
 			Func:    funcName,
 			Err:     err,
 			Payload: respond.Payload("response", "handle.Reply"),
-		}, map[string]interface{}{"api": supportInfo(), "error": "please, use these API"})
+		}, t.Payload{"api": supportInfo(), "error": "please, use these API"})
 		return nil
 	}
 
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": resp})
+	respond.WithJSON(ctx, fasthttp.StatusOK, t.Payload{"data": resp})
 	return nil
 }
 
 func (c *controller) info(ctx *routing.Context) error {
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"api": supportInfo()})
+	respond.WithJSON(ctx, fasthttp.StatusOK, t.Payload{"api": supportInfo()})
 	return nil
 }
 
@@ -55,11 +56,11 @@ func (c *controller) singleCryptoCourse(ctx *routing.Context) error {
 	k := cache.GenKey("crc", fiat, crypto)
 	d, ok := c.store.Get(k)
 	if !ok {
-		respond.WithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{"err": "not supported currency"})
+		respond.WithJSON(ctx, fasthttp.StatusBadRequest, t.Payload{"err": "not supported currency"})
 		return nil
 	}
 
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"price": d.Price})
+	respond.WithJSON(ctx, fasthttp.StatusOK, t.Payload{"price": d.Price})
 	return nil
 }
 
@@ -68,10 +69,10 @@ func (c *controller) singleERC20Course(ctx *routing.Context) error {
 	fiat := ctx.Param("fiat")
 	price, err := handle.SingleERC20Course(fiat, token, c.service)
 	if err != nil {
-		respond.WithJSON(ctx, fasthttp.StatusBadRequest, map[string]interface{}{"err": "not supported currency"})
+		respond.WithJSON(ctx, fasthttp.StatusBadRequest, t.Payload{"err": "not supported currency"})
 		return nil
 	}
-	respond.WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"price": price})
+	respond.WithJSON(ctx, fasthttp.StatusOK, t.Payload{"price": price})
 	return nil
 }
 

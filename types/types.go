@@ -94,3 +94,5 @@ type TrustDoc struct {
 	} `json:"price"`
 	LastUpdate time.Time `json:"last_update"`
 }
+
+type Payload map[string]interface{}

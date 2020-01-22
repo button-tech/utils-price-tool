@@ -23,6 +23,7 @@ func getUpdateWorkers() []updateWorker {
 }
 
 func Start(p *prices.PricesData) {
+
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
 		logger.Error("AddTrustHexBySlip", err)

@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/button-tech/logger"
-	routing "github.com/qiangxue/fasthttp-routing"
+	t "github.com/button-tech/utils-price-tool/types"
+	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 	"io/ioutil"
 )
@@ -22,7 +23,7 @@ type Error struct {
 	Payload string
 }
 
-func WithJSON(ctx *routing.Context, code int, payload map[string]interface{}) {
+func WithJSON(ctx *routing.Context, code int, payload t.Payload) {
 	ctx.SetContentType("application/json")
 	ctx.SetStatusCode(code)
 	if err := json.NewEncoder(ctx).Encode(payload); err != nil {
@@ -30,14 +31,14 @@ func WithJSON(ctx *routing.Context, code int, payload map[string]interface{}) {
 	}
 }
 
-func WithWrapErrJSON(ctx *routing.Context, code int, e Error, payload map[string]interface{}) {
+func WithWrapErrJSON(ctx *routing.Context, code int, e Error, payload t.Payload) {
 	ctx.SetContentType("application/json")
 	ctx.SetStatusCode(code)
 	logger.Error(e.API, e.Err, logger.Params{
 		e.Func: e.Payload,
 	})
 	if payload == nil {
-		payload = map[string]interface{}{"error": e.Err.Error()}
+		payload = t.Payload{"error": e.Err.Error()}
 	}
 	if err := json.NewEncoder(ctx).Encode(payload); err != nil {
 		logger.Error("write answer", err)
@@ -73,7 +74,7 @@ func SwaggerJSONHandler(v string) (f func(ctx *routing.Context) error) {
 			}, nil)
 			return nil
 		}
-		WithJSON(ctx, fasthttp.StatusOK, map[string]interface{}{"data": data})
+		WithJSON(ctx, fasthttp.StatusOK, t.Payload{"data": data})
 		return nil
 	}
 	return

@@ -56,11 +56,11 @@ func (p *PricesData) SetTopList(c map[string]string) error {
 	}
 
 	if res.Response().StatusCode != 200 {
-		return errors.Wrap(errors.New("error"), "getTopList")
+		return errors.Wrap(errors.New("error"), "SetTopList")
 	}
 
 	if err = res.ToJSON(&topList); err != nil {
-		return errors.Wrap(err, "getTopList")
+		return errors.Wrap(err, "SetTopList")
 	}
 
 	if topList.Status.ErrorCode != 0 {
