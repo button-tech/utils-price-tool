@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/core/currencies"
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
@@ -17,12 +16,12 @@ import (
 
 const urlCRC = "https://min-api.cryptocompare.com/data/pricemultifull"
 
-func CrcUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
+func CrcUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
 	defer wg.Done()
 	SetPricesCRC(p)
 }
 
-func SetPricesCRC(p *prices.PricesData) {
+func SetPricesCRC(p *cache.Cache) {
 	var fsyms string
 	for value := range p.List {
 		fsyms += value + ","
@@ -41,10 +40,10 @@ func SetPricesCRC(p *prices.PricesData) {
 
 	close(c)
 
-	fiatMapping(c, p.Store)
+	fiatMapping(c, p)
 }
 
-func crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]types.CryptoCompare, wg *sync.WaitGroup, p *prices.PricesData) {
+func crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]types.CryptoCompare, wg *sync.WaitGroup, p *cache.Cache) {
 	defer wg.Done()
 
 	res, err := req.Get(urlCRC, req.Param{
@@ -70,7 +69,7 @@ func crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]types.CryptoCom
 	c <- result
 }
 
-func crcFastJson(byteRq []byte, p *prices.PricesData) (map[string][]types.CryptoCompare, error) {
+func crcFastJson(byteRq []byte, p *cache.Cache) (map[string][]types.CryptoCompare, error) {
 	var parser fastjson.Parser
 
 	parsed, err := parser.ParseBytes(byteRq)

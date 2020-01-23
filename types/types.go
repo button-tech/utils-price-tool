@@ -2,10 +2,6 @@ package types
 
 import "time"
 
-type RequestCoinMarketCap struct {
-	Tokens []TokensWithCurrency
-}
-
 type TokensWithCurrency struct {
 	Currency string  `json:"currency"`
 	Tokens   []Token `json:"tokens"`
@@ -15,13 +11,13 @@ type Token struct {
 	Contract string `json:"contract"`
 }
 
-type CoinMarketCap struct {
-	Status   bool         `json:"status"`
-	Docs     []docsPrices `json:"docs"`
-	Currency string       `json:"currency"`
+type CmcResponse struct {
+	Status   bool   `json:"status"`
+	Docs     []docs `json:"docs"`
+	Currency string `json:"currency"`
 }
 
-type docsPrices struct {
+type docs struct {
 	Price            string `json:"price"`
 	Contract         string `json:"contract"`
 	PercentChange24H string `json:"percent_change_24h"`

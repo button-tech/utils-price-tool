@@ -3,7 +3,6 @@ package platforms
 import (
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/core/currencies"
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
@@ -12,18 +11,20 @@ import (
 	"sync"
 )
 
-var TrustWalletURL = os.Getenv("TRUST_URL")
+var (
+	TrustWalletURL = os.Getenv("TRUST_URL")
+)
 
-func CmcUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
+func CmcUpdateWorker(wg *sync.WaitGroup, c *cache.Cache) {
 	defer wg.Done()
-	tokens := CreateCMCRequestData(p)
+	tokens := CreateCMCRequestData(c)
 
 	var tokensWG sync.WaitGroup
 	for _, t := range tokens {
 		tokensWG.Add(1)
 		go func(token types.TokensWithCurrency, tWG *sync.WaitGroup) {
 			defer tWG.Done()
-			if err := SetPricesCMC(token, p); err != nil {
+			if err := SetPricesCMC(token, c); err != nil {
 				logger.Error("cmcWorker", err)
 				return
 			}
@@ -32,8 +33,8 @@ func CmcUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	tokensWG.Wait()
 }
 
-func SetPricesCMC(tokens types.TokensWithCurrency, p *prices.PricesData) error {
-	var cmc types.CoinMarketCap
+func SetPricesCMC(tokens types.TokensWithCurrency, p *cache.Cache) error {
+	var cmc types.CmcResponse
 
 	res, err := req.Post(TrustWalletURL, req.BodyJSON(tokens))
 	if err != nil {
@@ -54,12 +55,12 @@ func SetPricesCMC(tokens types.TokensWithCurrency, p *prices.PricesData) error {
 		details.ChangePCT24Hour = v.PercentChange24H
 
 		k := cache.GenKey("cmc", cmc.Currency, v.Contract)
-		p.Store.Set(k, details)
+		p.Set(k, details)
 	}
 	return nil
 }
 
-func CreateCMCRequestData(p *prices.PricesData) []types.TokensWithCurrency {
+func CreateCMCRequestData(p *cache.Cache) []types.TokensWithCurrency {
 	var tokensOneCurrency types.TokensWithCurrency
 
 	tokensMultiCurrencies := make([]types.TokensWithCurrency, 0, len(currencies.SupportedCurrenciesList))
@@ -70,9 +71,6 @@ func CreateCMCRequestData(p *prices.PricesData) []types.TokensWithCurrency {
 		tokens = append(tokens, types.Token{Contract: c})
 	}
 
-	for _, t := range p.Tokens {
-		tokens = append(tokens, types.Token{Contract: t})
-	}
 	tokensOneCurrency.Tokens = tokens
 
 	for _, c := range currencies.SupportedCurrenciesList {

@@ -2,33 +2,31 @@ package v1
 
 import (
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/qiangxue/fasthttp-routing"
 )
 
-type Provider struct {
-	Store  *cache.Cache
-	Prices *prices.PricesData
-}
+//type Provider struct {
+//	Store  *cache.Cache
+//	Prices *cache.Cache
+//}
 
 type controller struct {
-	prices            *prices.PricesData
+	prices            *cache.Cache
 	store             *cache.Cache
 	privateCurrencies map[string][]string
 }
 
-func API(g *routing.RouteGroup, p *Provider) {
-	c := controller{
-		store:             p.Store,
-		prices:            p.Prices,
+func API(g *routing.RouteGroup, c *cache.Cache) {
+	controller := controller{
+		store:             c,
 		privateCurrencies: privateCurrencies(),
 	}
 
-	g.Get("/info", c.info)
+	g.Get("/info", controller.info)
 	g.Get("/docs/swagger.json", respond.SwaggerJSONHandler(v1))
-	g.Post("/prices", c.courses)
-	g.Post("/change", c.privatePrices)
+	g.Post("/prices", controller.courses)
+	g.Post("/change", controller.privatePrices)
 
 }
 

@@ -2,7 +2,6 @@ package platforms
 
 import (
 	"github.com/button-tech/logger"
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
@@ -13,7 +12,7 @@ import (
 
 const urlHuobi = "https://api.hbdm.com/api/v1/contract_index"
 
-func HuobiUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
+func HuobiUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
 	defer wg.Done()
 	if err := SetPricesHuobi(p); err != nil {
 		logger.Error("huobiWorker", err)
@@ -21,7 +20,7 @@ func HuobiUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	}
 }
 
-func SetPricesHuobi(p *prices.PricesData) error {
+func SetPricesHuobi(p *cache.Cache) error {
 	var (
 		huobi types.HuobiResponse
 		wg    sync.WaitGroup
@@ -48,7 +47,7 @@ func SetPricesHuobi(p *prices.PricesData) error {
 				var details cache.Details
 				details.Price = strconv.FormatFloat(v.IndexPrice, 'f', -1, 64)
 				k := cache.GenKey("huobi", "usd", val)
-				p.Store.Set(k, details)
+				p.Set(k, details)
 			}
 		}(v, &wg)
 	}

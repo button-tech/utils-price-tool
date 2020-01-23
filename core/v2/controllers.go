@@ -67,7 +67,7 @@ func (c *controller) singleCryptoCourse(ctx *routing.Context) error {
 func (c *controller) singleERC20Course(ctx *routing.Context) error {
 	token := ctx.Param("token")
 	fiat := ctx.Param("fiat")
-	price, err := handle.SingleERC20Course(fiat, token, c.service)
+	price, err := handle.SingleERC20Course(fiat, token, c.store)
 	if err != nil {
 		respond.WithJSON(ctx, fasthttp.StatusBadRequest, t.Payload{"err": "not supported currency"})
 		return nil

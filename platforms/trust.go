@@ -2,7 +2,7 @@ package platforms
 
 import (
 	"github.com/button-tech/logger"
-	"github.com/button-tech/utils-price-tool/core/prices"
+	"github.com/button-tech/utils-price-tool/core/currencies"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/types"
 	"github.com/imroc/req"
@@ -12,12 +12,28 @@ import (
 	"sync"
 )
 
-var trustWalletV2URL = os.Getenv("TRUST_URL_V2")
+var (
+	trustWalletV2URL = os.Getenv("TRUST_URL_V2")
+	TrustV2Coins     []types.PricesTrustV2
+)
 
-func TrustUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
+func init() {
+	TrustV2Coins = make([]types.PricesTrustV2, 0, len(currencies.SupportedCurrenciesList))
+	for _, c := range currencies.SupportedCurrenciesList {
+		price := types.PricesTrustV2{Currency: c}
+		allAssets := make([]types.Assets, 0, len(currencies.TrustV2Coins))
+		for _, v := range currencies.TrustV2Coins {
+			allAssets = append(allAssets, types.Assets{Coin: v, Type: "coin"})
+		}
+		price.Assets = allAssets
+		TrustV2Coins = append(TrustV2Coins, price)
+	}
+}
+
+func TrustUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
 	defer wg.Done()
 	var inWG sync.WaitGroup
-	for _, v := range p.TrustV2Coins {
+	for _, v := range TrustV2Coins {
 		inWG.Add(1)
 		go func(inWg *sync.WaitGroup, price types.PricesTrustV2) {
 			defer inWG.Done()
@@ -30,7 +46,7 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *prices.PricesData) {
 	inWG.Wait()
 }
 
-func SetPricesTrust(prices types.PricesTrustV2, p *prices.PricesData) error {
+func SetPricesTrust(prices types.PricesTrustV2, p *cache.Cache) error {
 	var wg sync.WaitGroup
 
 	res, err := req.Post(trustWalletV2URL, req.BodyJSON(&prices))
@@ -54,9 +70,9 @@ func SetPricesTrust(prices types.PricesTrustV2, p *prices.PricesData) error {
 		go func(doc types.TrustDoc, wg *sync.WaitGroup) {
 			defer wg.Done()
 			coin := strconv.Itoa(doc.Coin)
-			sd := p.DetailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
+			sd := cache.DetailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
 			k := cache.GenKey("ntrust", trustRes.Currency, coin)
-			p.Store.Set(k, sd)
+			p.Set(k, sd)
 		}(doc, &wg)
 	}
 	wg.Wait()

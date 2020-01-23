@@ -4,7 +4,6 @@ import (
 	"log"
 	"sync"
 
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/platforms"
 	"github.com/button-tech/utils-price-tool/types"
@@ -71,7 +70,7 @@ func Unify(r *Data) UniqueData {
 	}
 }
 
-func Reply(u *UniqueData, v string, store *cache.Cache, s *prices.PricesData) ([]Response, error) {
+func Reply(u *UniqueData, v string, store *cache.Cache, s *cache.Cache) ([]Response, error) {
 	supportAPIs := chooseVersion(v)
 	if _, ok := supportAPIs[u.API]; !ok {
 		return nil, errors.New("API: no matches")
@@ -95,7 +94,7 @@ func chooseVersion(v string) map[string]struct{} {
 	return supportedAPIv2
 }
 
-func mapping(u *UniqueData, store *cache.Cache, p *prices.PricesData) ([]Response, error) {
+func mapping(u *UniqueData, store *cache.Cache, p *cache.Cache) ([]Response, error) {
 	result := make([]Response, 0, len(u.Currencies))
 
 	var wg sync.WaitGroup
@@ -160,9 +159,9 @@ func mapping(u *UniqueData, store *cache.Cache, p *prices.PricesData) ([]Respons
 	return result, nil
 }
 
-func SingleERC20Course(fiat, crypto string, s *prices.PricesData) (string, error) {
+func SingleERC20Course(fiat, crypto string, s *cache.Cache) (string, error) {
 
-	var cmc types.CoinMarketCap
+	var cmc types.CmcResponse
 
 	token := make([]types.Token, 0, 1)
 	token = append(token, types.Token{Contract: crypto})

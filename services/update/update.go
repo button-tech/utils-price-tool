@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/button-tech/logger"
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/pkg/slip0044"
+	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/button-tech/utils-price-tool/platforms"
 )
 
-type updateWorker func(wg *sync.WaitGroup, prices *prices.PricesData)
+type updateWorker func(wg *sync.WaitGroup, c *cache.Cache)
 
 func getUpdateWorkers() []updateWorker {
 	return []updateWorker{
@@ -22,7 +22,7 @@ func getUpdateWorkers() []updateWorker {
 	}
 }
 
-func Start(p *prices.PricesData) {
+func Start(p *cache.Cache) {
 
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {

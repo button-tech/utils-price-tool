@@ -2,15 +2,15 @@ package server
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/button-tech/logger"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
-	"github.com/button-tech/utils-price-tool/core/prices"
 	"github.com/button-tech/utils-price-tool/core/v1"
 	"github.com/button-tech/utils-price-tool/core/v2"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
-	"time"
 
 	t "github.com/button-tech/utils-price-tool/types"
 )
@@ -20,22 +20,20 @@ type Core struct {
 	R     *routing.Router
 	G     *routing.RouteGroup
 	Gv2   *routing.RouteGroup
-	p     *prices.PricesData
 	store *cache.Cache
 }
 
-func New(store *cache.Cache, p *prices.PricesData) (c *Core) {
+func New(store *cache.Cache) (c *Core) {
 	c = &Core{
 		R:     routing.New(),
 		store: store,
-		p:     p,
 	}
 	c.R.Use(cors)
 	c.initBaseRoute()
 	c.fs()
 
-	v1.API(c.G, &v1.Provider{Store: c.store, Prices: c.p})
-	v2.API(c.Gv2, &v2.Provider{Store: c.store, Prices: c.p})
+	v1.API(c.G, store)
+	v2.API(c.Gv2, store)
 	return
 }
 
