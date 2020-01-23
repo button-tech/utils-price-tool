@@ -23,30 +23,30 @@ type Core struct {
 	store *cache.Cache
 }
 
-func New(store *cache.Cache) (c *Core) {
-	c = &Core{
+func New(c *cache.Cache) (core *Core) {
+	core = &Core{
 		R:     routing.New(),
-		store: store,
+		store: c,
 	}
-	c.R.Use(cors)
-	c.initBaseRoute()
-	c.fs()
+	core.R.Use(cors)
+	core.initBaseRoute()
+	core.fs()
 
-	v1.API(c.G, store)
-	v2.API(c.Gv2, store)
+	v1.API(core.G, c)
+	v2.API(core.Gv2, c)
 	return
 }
 
-func (c *Core) initBaseRoute() {
-	c.G = c.R.Group("/courses/v1")
-	c.Gv2 = c.R.Group("/courses/v2")
+func (core *Core) initBaseRoute() {
+	core.G = core.R.Group("/courses/v1")
+	core.Gv2 = core.R.Group("/courses/v2")
 }
 
-func (c *Core) fs() {
-	c.S = &fasthttp.Server{
+func (core *Core) fs() {
+	core.S = &fasthttp.Server{
 		WriteTimeout: time.Second * 15,
 		ReadTimeout:  time.Second * 15,
-		Handler:      c.R.HandleRequest,
+		Handler:      core.R.HandleRequest,
 	}
 }
 

@@ -22,7 +22,7 @@ func getUpdateWorkers() []updateWorker {
 	}
 }
 
-func Start(p *cache.Cache) {
+func Start(c *cache.Cache) {
 
 	converted, err := slip0044.AddTrustHexBySlip()
 	if err != nil {
@@ -35,14 +35,14 @@ func Start(p *cache.Cache) {
 	t := time.NewTicker(time.Minute * 7)
 	for ; true; <-t.C {
 		start := time.Now()
-		if err := p.SetTopList(converted); err != nil {
+		if err := c.SetTopList(converted); err != nil {
 			logger.Error("GetTopList", err)
 			continue
 		}
 
 		for _, worker := range uw {
 			wg.Add(1)
-			go worker(&wg, p)
+			go worker(&wg, c)
 		}
 
 		logger.Info("Count goroutines: ", runtime.NumGoroutine())

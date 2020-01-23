@@ -16,6 +16,8 @@ import (
 type stored map[string]Details
 
 type Details struct {
+	Token           string
+	Fiat            string
 	Price           string
 	ChangePCTHour   string
 	ChangePCT24Hour string

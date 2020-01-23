@@ -92,3 +92,5 @@ type TrustDoc struct {
 }
 
 type Payload map[string]interface{}
+
+type Set map[string]struct{}

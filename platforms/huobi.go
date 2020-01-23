@@ -12,15 +12,15 @@ import (
 
 const urlHuobi = "https://api.hbdm.com/api/v1/contract_index"
 
-func HuobiUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
+func HuobiUpdateWorker(wg *sync.WaitGroup, c *cache.Cache) {
 	defer wg.Done()
-	if err := SetPricesHuobi(p); err != nil {
+	if err := SetHuobi(c); err != nil {
 		logger.Error("huobiWorker", err)
 		return
 	}
 }
 
-func SetPricesHuobi(p *cache.Cache) error {
+func SetHuobi(c *cache.Cache) error {
 	var (
 		huobi types.HuobiResponse
 		wg    sync.WaitGroup
@@ -42,12 +42,12 @@ func SetPricesHuobi(p *cache.Cache) error {
 	wg.Add(len(huobi.Data))
 	for _, v := range huobi.Data {
 		go func(v types.HuobiData, wg *sync.WaitGroup) {
-			if val, ok := p.List[v.Symbol]; ok {
+			if val, ok := c.List[v.Symbol]; ok {
 				defer wg.Done()
 				var details cache.Details
 				details.Price = strconv.FormatFloat(v.IndexPrice, 'f', -1, 64)
 				k := cache.GenKey("huobi", "usd", val)
-				p.Set(k, details)
+				c.Set(k, details)
 			}
 		}(v, &wg)
 	}

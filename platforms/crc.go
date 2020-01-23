@@ -18,32 +18,32 @@ const urlCRC = "https://min-api.cryptocompare.com/data/pricemultifull"
 
 func CrcUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
 	defer wg.Done()
-	SetPricesCRC(p)
+	SetCRC(p)
 }
 
-func SetPricesCRC(p *cache.Cache) {
+func SetCRC(c *cache.Cache) {
 	var fsyms string
-	for value := range p.List {
+	for value := range c.List {
 		fsyms += value + ","
 	}
 
 	sortedCurrencies := createCRCRequestData()
 
-	c := make(chan map[string][]types.CryptoCompare, len(sortedCurrencies))
+	cmc := make(chan map[string][]types.CryptoCompare, len(sortedCurrencies))
 
 	var wg sync.WaitGroup
 	wg.Add(len(sortedCurrencies))
 	for _, tsyms := range sortedCurrencies {
-		go crcPricesRequest(tsyms, fsyms, c, &wg, p)
+		go crcPricesRequest(tsyms, fsyms, cmc, &wg, c)
 	}
 	wg.Wait()
 
-	close(c)
+	close(cmc)
 
-	fiatMapping(c, p)
+	fiatMapping(cmc, c)
 }
 
-func crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]types.CryptoCompare, wg *sync.WaitGroup, p *cache.Cache) {
+func crcPricesRequest(tsyms, fsyms string, cmc chan<- map[string][]types.CryptoCompare, wg *sync.WaitGroup, c *cache.Cache) {
 	defer wg.Done()
 
 	res, err := req.Get(urlCRC, req.Param{
@@ -60,16 +60,16 @@ func crcPricesRequest(tsyms, fsyms string, c chan<- map[string][]types.CryptoCom
 		return
 	}
 
-	result, err := crcFastJson(res.Bytes(), p)
+	result, err := crcFastJson(res.Bytes(), c)
 	if err != nil {
 		logger.Error("crcPricesRequest", err)
 		return
 	}
 
-	c <- result
+	cmc <- result
 }
 
-func crcFastJson(byteRq []byte, p *cache.Cache) (map[string][]types.CryptoCompare, error) {
+func crcFastJson(byteRq []byte, c *cache.Cache) (map[string][]types.CryptoCompare, error) {
 	var parser fastjson.Parser
 
 	parsed, err := parser.ParseBytes(byteRq)
@@ -82,7 +82,7 @@ func crcFastJson(byteRq []byte, p *cache.Cache) (map[string][]types.CryptoCompar
 	rawObject := parsed.GetObject("RAW")
 
 	rawObject.Visit(func(key []byte, value *fastjson.Value) {
-		if obj, ok := p.List[string(key)]; ok {
+		if obj, ok := c.List[string(key)]; ok {
 			crypto := value.GetObject()
 
 			crypto.Visit(func(key []byte, value *fastjson.Value) {
@@ -113,9 +113,9 @@ func crcFastJson(byteRq []byte, p *cache.Cache) (map[string][]types.CryptoCompar
 	return cryptoCompareDict, nil
 }
 
-func fiatMapping(c chan map[string][]types.CryptoCompare, store *cache.Cache) {
+func fiatMapping(cmc chan map[string][]types.CryptoCompare, c *cache.Cache) {
 	for {
-		m, ok := <-c
+		m, ok := <-cmc
 		if !ok {
 			break
 		}
@@ -126,7 +126,7 @@ func fiatMapping(c chan map[string][]types.CryptoCompare, store *cache.Cache) {
 				details.ChangePCT24Hour = strconv.FormatFloat(i.ChangePCT24Hour, 'f', 2, 64)
 				details.ChangePCTHour = strconv.FormatFloat(i.ChangePCTHour, 'f', 2, 64)
 				k := cache.GenKey("crc", k, i.FromSymbol)
-				store.Set(k, details)
+				c.Set(k, details)
 			}
 		}
 	}

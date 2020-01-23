@@ -30,14 +30,14 @@ func init() {
 	}
 }
 
-func TrustUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
+func TrustUpdateWorker(wg *sync.WaitGroup, c *cache.Cache) {
 	defer wg.Done()
 	var inWG sync.WaitGroup
 	for _, v := range TrustV2Coins {
 		inWG.Add(1)
 		go func(inWg *sync.WaitGroup, price types.PricesTrustV2) {
 			defer inWG.Done()
-			if err := SetPricesTrust(price, p); err != nil {
+			if err := SetTrust(price, c); err != nil {
 				logger.Error("trustV2Worker", err)
 				return
 			}
@@ -46,7 +46,7 @@ func TrustUpdateWorker(wg *sync.WaitGroup, p *cache.Cache) {
 	inWG.Wait()
 }
 
-func SetPricesTrust(prices types.PricesTrustV2, p *cache.Cache) error {
+func SetTrust(prices types.PricesTrustV2, c *cache.Cache) error {
 	var wg sync.WaitGroup
 
 	res, err := req.Post(trustWalletV2URL, req.BodyJSON(&prices))
@@ -72,7 +72,7 @@ func SetPricesTrust(prices types.PricesTrustV2, p *cache.Cache) error {
 			coin := strconv.Itoa(doc.Coin)
 			sd := cache.DetailsConversion(doc.Price.Value, 0, doc.Price.Change24H, 0)
 			k := cache.GenKey("ntrust", trustRes.Currency, coin)
-			p.Set(k, sd)
+			c.Set(k, sd)
 		}(doc, &wg)
 	}
 	wg.Wait()

@@ -78,7 +78,8 @@ func (c *controller) courses(ctx *routing.Context) error {
 	}
 
 	uniqueData := handle.Unify(&data)
-	res, err := handle.Reply(&uniqueData, v1, c.store, c.prices)
+
+	res, err := handle.Reply(&uniqueData, v1, c.storage)
 	if err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v1,
@@ -120,7 +121,7 @@ func (c *controller) privatePrices(ctx *routing.Context) error {
 		//	bip := currDetail[0]
 		name := currDetail[1]
 
-		d, ok := c.store.Get(cache.GenKey("coinMarketCap", "usd", symbol))
+		d, ok := c.storage.Get(cache.GenKey("coinMarketCap", "usd", symbol))
 		if ok {
 			priceInfo, err := coinMarketPricesInfo(d.Price, d.ChangePCT24Hour, d.ChangePCT7Day)
 			if err != nil {

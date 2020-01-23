@@ -7,6 +7,7 @@ import (
 	"github.com/button-tech/utils-price-tool/core/internal/handle"
 	"github.com/button-tech/utils-price-tool/core/internal/respond"
 	"github.com/button-tech/utils-price-tool/pkg/storage/cache"
+	"github.com/button-tech/utils-price-tool/platforms"
 	t "github.com/button-tech/utils-price-tool/types"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
@@ -30,7 +31,7 @@ func (c *controller) courses(ctx *routing.Context) error {
 	}
 
 	unique := handle.Unify(&r)
-	resp, err := handle.Reply(&unique, v2, c.store, nil)
+	resp, err := handle.Reply(&unique, v2, c.store)
 	if err != nil {
 		respond.WithWrapErrJSON(ctx, fasthttp.StatusBadRequest, respond.Error{
 			API:     v2,
@@ -67,7 +68,7 @@ func (c *controller) singleCryptoCourse(ctx *routing.Context) error {
 func (c *controller) singleERC20Course(ctx *routing.Context) error {
 	token := ctx.Param("token")
 	fiat := ctx.Param("fiat")
-	price, err := handle.SingleERC20Course(fiat, token, c.store)
+	price, err := platforms.SingleERC20Course(fiat, token)
 	if err != nil {
 		respond.WithJSON(ctx, fasthttp.StatusBadRequest, t.Payload{"err": "not supported currency"})
 		return nil

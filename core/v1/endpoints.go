@@ -6,20 +6,14 @@ import (
 	"github.com/qiangxue/fasthttp-routing"
 )
 
-//type Provider struct {
-//	Store  *cache.Cache
-//	Prices *cache.Cache
-//}
-
 type controller struct {
-	prices            *cache.Cache
-	store             *cache.Cache
+	storage           *cache.Cache
 	privateCurrencies map[string][]string
 }
 
 func API(g *routing.RouteGroup, c *cache.Cache) {
 	controller := controller{
-		store:             c,
+		storage:           c,
 		privateCurrencies: privateCurrencies(),
 	}
 

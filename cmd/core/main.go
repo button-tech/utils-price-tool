@@ -13,19 +13,19 @@ import (
 )
 
 func main() {
-	store := cache.NewCache()
+	storage := cache.NewCache()
 
-	go update.Start(store)
+	go update.Start(storage)
 
 	if err := logger.InitLogger(os.Getenv("DSN")); err != nil {
 		log.Fatal(err)
 	}
 
-	c := core.New(store)
-	signalforExit := make(chan os.Signal, 1)
-	defer close(signalforExit)
+	c := core.New(storage)
+	signalForExit := make(chan os.Signal, 1)
+	defer close(signalForExit)
 
-	signal.Notify(signalforExit,
+	signal.Notify(signalForExit,
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
@@ -42,7 +42,7 @@ func main() {
 		}
 	}()
 
-	stop := <-signalforExit
+	stop := <-signalForExit
 	logger.Info("Received", stop)
 	logger.Info("Waiting for all jobs to stop")
 }
