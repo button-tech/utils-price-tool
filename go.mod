@@ -11,6 +11,6 @@ require (
 	github.com/imroc/req v0.2.4
 	github.com/pkg/errors v0.9.1
 	github.com/qiangxue/fasthttp-routing v0.0.0-20160225050629-6ccdc2a18d87
-	github.com/valyala/fasthttp v1.8.0
+	github.com/valyala/fasthttp v1.34.0
 	github.com/valyala/fastjson v1.4.5
 )
